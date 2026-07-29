@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testes EL250 - FINAL COMPARTILHADO</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+*{font-family:Segoe UI,Tahoma,sans-serif} body{background:#f4f6f9;padding:20px}
+.header{background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;padding:22px;border-radius:15px;margin-bottom:15px}
+.step-card{border:3px solid #dee2e6;border-radius:15px;padding:18px;margin-bottom:12px;background:white}
+.step-card.ativo{border-color:#ffc107;background:#fff3cd} .step-card.concluido{border-color:#198754;background:#d1e7dd} .step-card.erro{border-color:#dc3545;background:#f8d7da}
+.scan-ativo{border:3px solid #ffc107!important;background:#fff3cd!important;font-size:22px!important}
+.input-leitura{font-size:20px;padding:14px;text-align:center}
+.log-box{background:#111;color:#0f0;font-family:monospace;font-size:12px;padding:14px;border-radius:8px;max-height:300px;overflow:auto;white-space:pre-wrap}
+.config-fixed{background:#fff;border:2px solid #0d6efd;border-radius:12px}
+.serie-box{background:#212529;color:white;border-radius:12px;padding:18px}
+.serie-box.piscar{animation:piscar 1s infinite}
+@keyframes piscar{0%{box-shadow:0 0 0 0 rgba(25,135,84,.7)}70%{box-shadow:0 0 0 15px rgba(25,135,84,0)}100%{box-shadow:0 0 0 0 rgba(25,135,84,0)}}
+.serie-box input{font-size:32px;font-weight:900;text-align:center;letter-spacing:2px;text-transform:uppercase}
+.rede-box{border:2px dashed #0d6efd;background:#e7f1ff;border-radius:12px}
+.config-share{background:#fff3cd;border:2px solid #ffc107;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="container-fluid">
+<div class="header d-flex justify-content-between align-items-center"><div><h2 class="mb-1"><i class="bi bi-upc-scan"></i> Teste EL250 - Multi-PC</h2><small>1 cadastro de produtos para todos os PCs • Auto volta • Logo Elgin • Sem Modo</small></div><div><a href="logs.html" class="btn btn-warning btn-sm me-2">Logs</a><a href="produtos.html" class="btn btn-info btn-sm me-2">Produtos</a><a href="index.html" class="btn btn-light btn-sm">Dashboard</a></div></div>
+
+<!-- CONFIG COMPARTILHADA - NOVO -->
+<div class="card config-share mb-3 no-print" id="cardShare">
+<div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+<b><i class="bi bi-share"></i> CADASTRO ÚNICO PARA VÁRIOS COMPUTADORES</b>
+<small class="badge bg-dark">Usando: \\10.50.1.143\Volume_1\log leitores\config\</small>
+</div>
+<div class="card-body py-2">
+<div class="row g-2 align-items-center">
+<div class="col-md-4">
+<div class="small fw-bold">Como funciona:</div>
+<small class="text-muted" style="font-size:10px;">Salve os produtos 1x na pasta da rede. Todos os PCs carregam automaticamente do mesmo arquivo.</small>
+<div class="mt-2 d-flex gap-2">
+<button class="btn btn-dark btn-sm" onclick="salvarProdutosNaRede()"><i class="bi bi-cloud-upload"></i> Salvar Produtos na Rede</button>
+<button class="btn btn-success btn-sm" onclick="carregarProdutosDaRede()"><i class="bi bi-cloud-download"></i> Carregar da Rede</button>
+</div>
+</div>
+<div class="col-md-4">
+<label class="small fw-bold">Status compartilhado</label>
+<div id="statusShare" class="small p-2 bg-white rounded border" style="min-height:60px;font-size:11px;">Tentando carregar produtos.json compartilhado...</div>
+<input type="file" id="fileImport" accept=".json" style="display:none;" onchange="importarJSON(event)">
+</div>
+<div class="col-md-4">
+<div class="d-flex gap-2 flex-wrap">
+<button class="btn btn-outline-primary btn-sm" onclick="exportarProdutos()"><i class="bi bi-download"></i> Exportar produtos.json</button>
+<button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('fileImport').click()"><i class="bi bi-upload"></i> Importar produtos.json</button>
+<button class="btn btn-outline-info btn-sm" onclick="forcarRecarregarTudo()"><i class="bi bi-arrow-clockwise"></i> Recarregar Tudo</button>
+</div>
+<small class="text-muted d-block mt-2" style="font-size:10px;"><b>Opção 1 (Recomendado):</b> Coloque todos os PCs para abrir o sistema via <code>http://IP_DO_PC_PRINCIPAL:8000</code> rodando <code>python -m http.server</code> na pasta. Assim todos usam o mesmo produtos.json automaticamente.<br><b>Opção 2:</b> Salve produtos na pasta de rede e clique em Carregar da Rede em cada PC.</small>
+</div>
+</div>
+</div>
+</div>
+
+<!-- REDE LOGS -->
+<div class="card rede-box mb-3 no-print" id="cardRede">
+<div class="card-body py-2">
+<div class="row align-items-center g-2">
+<div class="col-md-5">
+<label class="small fw-bold text-primary"><i class="bi bi-hdd-network"></i> LOGS: \\10.50.1.143\Volume_1\log leitores</label>
+<div class="d-flex gap-2 mt-1">
+<button class="btn btn-primary btn-sm" onclick="selecionarPastaRede()">Selecionar Pasta Logs</button>
+<button class="btn btn-success btn-sm" onclick="forcarSalvarRede()">Salvar Log Agora</button>
+<button class="btn btn-outline-dark btn-sm" onclick="testarPastaRede()">Testar</button>
+</div>
+</div>
+<div class="col-md-4">
+<input id="caminhoRede" class="form-control form-control-sm" readonly value="\\10.50.1.143\Volume_1\log leitores">
+<div id="statusPasta" class="small mt-1 p-1 bg-white rounded border" style="min-height:32px;font-size:11px;">Selecione a pasta</div>
+</div>
+<div class="col-md-3">
+<div class="form-check"><input class="form-check-input" type="checkbox" id="chkAutoSalvar" checked><label class="form-check-label small fw-bold" for="chkAutoSalvar">Salvar auto na rede</label></div>
+<div class="form-check"><input class="form-check-input" type="checkbox" id="chkAutoVolta" checked><label class="form-check-label small fw-bold" for="chkAutoVolta">Voltar auto p/ série (3s)</label></div>
+<div class="form-check"><input class="form-check-input" type="checkbox" id="chkAutoImprimirEtiqueta" checked><label class="form-check-label small fw-bold text-success" for="chkAutoImprimirEtiqueta">🖨️ Imprimir etiqueta auto ao finalizar</label></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card config-fixed mb-3 no-print" id="cardConfigFixa">
+<div class="card-header bg-primary text-white d-flex justify-content-between"><b><i class="bi bi-gear"></i> CONFIGURAÇÃO FIXA (1x)</b><small id="statusConfig" class="badge bg-light text-primary">Carregando...</small></div>
+<div class="card-body"><div class="row g-2">
+<div class="col-md-4"><label class="small fw-bold">Produto (Código) *</label><select id="produtoSel" class="form-select form-select-lg"></select></div>
+<div class="col-md-4"><label class="small fw-bold">Operador *</label><select id="operadorSel" class="form-select form-select-lg"></select></div>
+<div class="col-md-4"><label class="small fw-bold">Modelo *</label><input id="modeloSel" class="form-control form-control-lg" value="46EL250USC01"></div>
+</div>
+<div class="mt-2 d-flex gap-2"><button class="btn btn-primary btn-sm" onclick="salvarConfigFixa()">Salvar Configuração</button><button class="btn btn-outline-secondary btn-sm" onclick="editarConfigFixa()">Editar</button><span class="ms-auto badge bg-success" id="contadorTotal">Total: 0</span></div>
+</div></div>
+
+<div class="card serie-box mb-4 no-print" id="cardSerie">
+<div class="card-body">
+<div class="row align-items-end">
+<div class="col-md-8"><label class="small text-warning fw-bold"><i class="bi bi-upc-scan"></i> NÚMERO DE SÉRIE - BIPE AQUI *</label><input id="serieSel" class="form-control form-control-lg" placeholder="Bipe SN aqui" autocomplete="off"></div>
+<div class="col-md-4"><button class="btn btn-success btn-lg w-100" style="height:58px;" onclick="iniciarSequencia()"><i class="bi bi-play-fill"></i> INICIAR TESTE</button></div>
+</div>
+<div id="msgAutoVolta" class="alert alert-success mt-3" style="display:none;"><i class="bi bi-arrow-clockwise"></i> Voltando para próximo em <b id="contadorRegressivo">3</b>s... <span class="float-end">Hoje: <b id="totalHoje">0</b></span></div>
+</div>
+</div>
+
+<div id="areaSequencia" class="no-print" style="display:none;">
+<div class="alert alert-info py-2 d-flex justify-content-between"><span><b id="infoResumo"></b></span><span>Início: <b id="horaInicio"></b> | <b id="totalCodigos">0</b></span></div>
+<div id="stepsContainer"></div>
+</div>
+
+<div id="resultadoFinal" class="card mt-3 no-print" style="display:none;"></div>
+
+<div id="comprovante" style="display:none;background:white;border:2px solid #000;padding:18px;margin-top:18px;">
+<div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:8px;"><div><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Elgin_logo.svg/320px-Elgin_logo.svg.png" alt="elgin" style="height:30px;" onerror="this.outerHTML='<b>\'elgin</b>'"><br><small>CNPJ 14.200.166/0005-90</small></div><div style="text-align:right;"><div id="compResultado" style="font-weight:900;font-size:20px;">APROVADO</div><small id="compID"></small></div></div>
+<h6 class="text-center my-3">COMPROVANTE - EVIDÊNCIA</h6>
+<table border="1" cellpadding="5" style="width:100%;border-collapse:collapse;font-size:11px;"><tr><td><b>Início</b></td><td id="c_inicio"></td><td><b>Fim</b></td><td id="c_fim"></td></tr><tr><td><b>Produto (Código)</b></td><td id="c_prod"></td><td><b>Modelo</b></td><td id="c_model"></td></tr><tr><td><b>Série</b></td><td id="c_serie"></td><td><b>Operador</b></td><td id="c_oper"></td></tr><tr><td><b>Duração</b></td><td id="c_dur"></td><td><b>Hash</b></td><td id="c_hash" style="font-family:monospace;font-size:9px;"></td></tr></table>
+<table border="1" cellpadding="4" style="width:100%;border-collapse:collapse;font-size:10px;margin-top:10px;"><thead><tr style="background:#eee;"><th># - Nome do Código</th><th>Esperado</th><th>Lido</th><th>Status</th><th>Hora</th></tr></thead><tbody id="c_leituras"></tbody></table>
+<div class="no-print mt-2 small bg-light p-2 rounded"><b>Arquivo:</b> <span id="nomeArquivoGerado" style="font-family:monospace;"></span></div>
+<div class="no-print text-center mt-3 d-flex gap-2 justify-content-center flex-wrap">
+<button class="btn btn-dark btn-sm" onclick="window.print()">Imprimir</button>
+<button class="btn btn-primary btn-sm" onclick="forcarSalvarRede()">Salvar na Rede</button>
+<button class="btn btn-success btn-sm" onclick="voltarParaSerieManual()">Próximo Leitor</button>
+</div>
+<div id="statusSalvoRede" class="mt-2 small text-center"></div>
+</div>
+
+<div id="areaLogTerminal" class="card mt-3 no-print" style="display:none;"><div class="card-header bg-dark text-white py-2">LOG BRUTO</div><div class="card-body p-0"><div class="log-box" id="logTerminal"></div></div></div>
+</div>
+
+<script>
+let stepAtual=0,dadosTeste={},inicioTimestamp=null,configFixa=null;
+let codigosEsperados={}, listaCodigosProduto=[];
+let dirHandleRede=null, dirHandleConfig=null;
+let contadorInterval=null;
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await inicializarDadosCompartilhados();
+  carregarProdutos();
+  carregarOperadores();
+  carregarConfigFixa();
+  restaurarHandleIDB();
+  atualizarContadorTotal();
+  document.getElementById('serieSel').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();iniciarSequencia();}});
+  document.getElementById('serieSel').addEventListener('input', atualizarEtiquetaAuto);
+});
+
+async function inicializarDadosCompartilhados(){
+  // Tenta carregar do servidor (se rodar via http://) primeiro - MELHOR PARA MULTI-PC
+  try{
+    const respProd = await fetch('./produtos.json?_='+Date.now());
+    if(respProd.ok){
+      const produtos = await respProd.json();
+      if(produtos.length>0){
+        localStorage.setItem('produtos', JSON.stringify(produtos));
+        document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos carregados de <b>produtos.json</b> (servidor compartilhado)<br>Todos os PCs usando mesmo arquivo!</span>';
+        console.log('Produtos carregados via fetch produtos.json');
+      }
+    }
+  }catch(e){ console.log('Sem produtos.json no servidor, usando localStorage'); }
+
+  try{
+    const respOp = await fetch('./operadores.json?_='+Date.now());
+    if(respOp.ok){
+      const ops = await respOp.json();
+      if(ops.length>0) localStorage.setItem('operadores', JSON.stringify(ops));
+    }
+  }catch(e){}
+
+  // Fallback localStorage
+  let produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+  if(produtos.length===0){
+    produtos=[
+      {id:'1', codigo:'46EL250USC01', nome:'LEITOR COD BARRAS 1D 2D ELGIN BEMA EL350', modelo:'46EL250USC01', tipo:'EL250', codigos:[
+        {ordem:1,nome:'QR Code - Etiqueta Produto',valorEsperado:'6922711051772',icone:'qr-code-scan'},
+        {ordem:2,nome:'Código 1D - Caixa 1',valorEsperado:'2112345678917',icone:'upc'},
+        {ordem:3,nome:'Código 1D - Caixa 2',valorEsperado:'6901028075763',icone:'upc-scan'},
+        {ordem:4,nome:'Firmware - Versão',valorEsperado:'',icone:'cpu'}
+      ]}
+    ];
+    localStorage.setItem('produtos',JSON.stringify(produtos));
+    document.getElementById('statusShare').innerHTML='<span class="text-warning">⚠️ Produtos padrão criados localmente.<br>Clique em <b>Salvar Produtos na Rede</b> para compartilhar.</span>';
+  }
+  let ops=JSON.parse(localStorage.getItem('operadores')||'[]');
+  if(ops.length===0){
+    ops=[
+      {id:'1',matricula:'ADMIN',nome:'Administrador',turno:'Manhã',status:'Ativo'},
+      {id:'2',matricula:'001',nome:'Operador 01',turno:'Manhã',status:'Ativo'}
+    ];
+    localStorage.setItem('operadores',JSON.stringify(ops));
+  }
+  if(!localStorage.getItem('testes')) localStorage.setItem('testes',JSON.stringify([]));
+  if(!localStorage.getItem('logs_evidencia')) localStorage.setItem('logs_evidencia',JSON.stringify([]));
+}
+
+function carregarProdutos(){
+  const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+  const sel=document.getElementById('produtoSel');
+  sel.innerHTML='<option value="">Selecione o Produto</option>'+produtos.map(p=>`<option value="${p.codigo}" data-modelo="${p.modelo}">${p.codigo} - ${p.nome}</option>`).join('');
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
+  if(cfg && cfg.produto) sel.value=cfg.produto;
+  sel.addEventListener('change',()=>{
+    const opt=sel.options[sel.selectedIndex];
+    if(opt && opt.dataset.modelo) document.getElementById('modeloSel').value=opt.dataset.modelo;
+    salvarConfigFixa();
+  });
+}
+function carregarOperadores(){
+  const ops=JSON.parse(localStorage.getItem('operadores')||'[]').filter(o=>o.status==='Ativo');
+  const sel=document.getElementById('operadorSel');
+  sel.innerHTML='<option value="">Selecione o Operador</option>'+ops.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
+  if(cfg && cfg.operador) sel.value=cfg.operador;
+  sel.addEventListener('change',salvarConfigFixa);
+}
+function carregarConfigFixa(){
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
+  if(cfg){
+    if(cfg.produto) document.getElementById('produtoSel').value=cfg.produto;
+    if(cfg.operador) document.getElementById('operadorSel').value=cfg.operador;
+    if(cfg.modelo) document.getElementById('modeloSel').value=cfg.modelo;
+    document.getElementById('statusConfig').innerText='Configurado: '+cfg.produto+' / '+cfg.operador;
+    document.getElementById('statusConfig').className='badge bg-success';
+    configFixa=cfg;
+    bloquearConfig(true);
+  }
+}
+
+function atualizarEtiquetaAuto(){
+  try{
+    const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'{}');
+    const produtoCodigo = cfg.produto || document.getElementById('produtoSel')?.value || '';
+    const modelo = cfg.modelo || document.getElementById('modeloSel')?.value || '';
+    const serie = document.getElementById('serieSel')?.value?.trim() || '';
+    const operador = cfg.operador || document.getElementById('operadorSel')?.value || '';
+
+    // Busca produto completo para pegar nome e ean13
+    const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+    const prod=produtos.find(p=>p.codigo===produtoCodigo) || {};
+    const nome = prod.nome || produtoCodigo;
+    const ean13 = prod.ean13 || '';
+
+    const etiquetaAuto = {
+      codigo: produtoCodigo,
+      descricao: nome,
+      modelo: modelo,
+      ean13: ean13,
+      serie: serie,
+      operador: operador,
+      atualizadoEm: new Date().toISOString()
+    };
+    localStorage.setItem('etiqueta_auto', JSON.stringify(etiquetaAuto));
+    // Também mantém compatibilidade com etiqueta_estado
+    // console.log('Etiqueta auto atualizada', etiquetaAuto);
+  }catch(e){ console.log('Erro etiqueta auto', e); }
+}
+
+function salvarEtiquetaParaImpressao(log){
+  try{
+    const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+    const prod=produtos.find(p=>p.codigo===log.produto) || {};
+    const etiquetaParaImpressao = {
+      codigo: log.produto,
+      descricao: prod.nome || log.produto,
+      modelo: log.modelo,
+      ean13: prod.ean13 || '',
+      serie: log.serie,
+      operador: log.operador,
+      resultado: log.resultado,
+      data: log.fim_br,
+      log_id: log.log_id,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('etiqueta_para_impressao', JSON.stringify(etiquetaParaImpressao));
+    localStorage.setItem('etiqueta_auto', JSON.stringify(etiquetaParaImpressao));
+    return etiquetaParaImpressao;
+  }catch(e){ return null; }
+}
+
+function solicitarImpressaoEtiqueta(log){
+  const etiqueta = salvarEtiquetaParaImpressao(log);
+  // Cria modal se não existir
+  let modalExist = document.getElementById('modalImpressaoEtiqueta');
+  if(modalExist) modalExist.remove();
+  const isAprovado = log.resultado==='APROVADO';
+  const modalHtml = `
+  <div id="modalImpressaoEtiqueta" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:16px;max-width:480px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,0.3);overflow:hidden;animation: popIn 0.3s ease">
+      <div style="background:${isAprovado?'linear-gradient(135deg,#198754,#20c997)':'linear-gradient(135deg,#dc3545,#fd7e14)'};color:white;padding:18px;text-align:center">
+        <div style="font-size:42px">${isAprovado?'✅':'❌'}</div>
+        <h4 style="margin:8px 0">Teste ${log.resultado}</h4>
+        <small>${log.produto} | S/N: ${log.serie}</small>
+      </div>
+      <div style="padding:20px">
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px">
+          <div><b>Produto:</b> ${etiqueta.descricao} (${etiqueta.codigo})</div>
+          <div><b>Modelo:</b> ${etiqueta.modelo}</div>
+          <div><b>Série:</b> <span style="font-weight:900;letter-spacing:1px">${etiqueta.serie}</span></div>
+          ${etiqueta.ean13?`<div><b>EAN13:</b> ${etiqueta.ean13}</div>`:''}
+          <div><b>Operador:</b> ${etiqueta.operador}</div>
+        </div>
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">
+          🔗 <b>Etiqueta vinculada</b> ao teste. Ao imprimir, o número de série <b>${etiqueta.serie}</b> será usado automaticamente.
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="fecharModalImpressaoEtiqueta()" style="flex:1;padding:12px;border:1px solid #dee2e6;border-radius:8px;background:white;font-weight:bold;cursor:pointer">Continuar sem imprimir</button>
+          <button onclick="abrirEtiquetaParaImpressao()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#0d6efd;color:white;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(13,110,253,0.3)">🖨️ Imprimir Etiqueta</button>
+        </div>
+        <div style="text-align:center;margin-top:10px">
+          <small class="text-muted">A etiqueta abrirá em nova aba com dados preenchidos</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes popIn{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}</style>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  // Som de bip opcional
+  try{ const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRyAgAAAAA='); audio.play().catch(()=>{});}catch{}
+}
+
+function fecharModalImpressaoEtiqueta(){
+  const m=document.getElementById('modalImpressaoEtiqueta');
+  if(m) m.remove();
+}
+
+function abrirEtiquetaParaImpressao(){
+  imprimirEtiquetaAuto(window._ultimoLog);
+  fecharModalImpressaoEtiqueta();
+}
+
+function salvarConfigFixa(){
+  const cfg={produto:document.getElementById('produtoSel').value,operador:document.getElementById('operadorSel').value,modelo:document.getElementById('modeloSel').value};
+  if(!cfg.produto||!cfg.operador||!cfg.modelo) return;
+  localStorage.setItem('config_fixa_teste',JSON.stringify(cfg));
+  configFixa=cfg;
+  document.getElementById('statusConfig').innerText='Salvo: '+cfg.produto+' / '+cfg.operador;
+  document.getElementById('statusConfig').className='badge bg-success';
+  bloquearConfig(true);
+  atualizarEtiquetaAuto();
+  document.getElementById('serieSel').focus();
+}
+function bloquearConfig(b){document.getElementById('produtoSel').disabled=b;document.getElementById('operadorSel').disabled=b;document.getElementById('modeloSel').disabled=b;}
+function editarConfigFixa(){bloquearConfig(false);document.getElementById('statusConfig').innerText='Editando...';document.getElementById('statusConfig').className='badge bg-warning text-dark';}
+function sanitizeNome(s){return (s||'').toString().replace(/[\\\/:*?"<>|]/g,'-').replace(/\s+/g,'_').slice(0,40);}
+function getCodigosDoProduto(codigoProduto){
+  const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+  const prod=produtos.find(p=>p.codigo===codigoProduto);
+  if(prod && prod.codigos && prod.codigos.length>0) return prod.codigos.sort((a,b)=>a.ordem-b.ordem);
+  return [
+    {ordem:1,nome:'QR Code - Etiqueta Produto',valorEsperado:'6922711051772',icone:'qr-code-scan'},
+    {ordem:2,nome:'Código 1D - Caixa 1',valorEsperado:'2112345678917',icone:'upc'},
+    {ordem:3,nome:'Código 1D - Caixa 2',valorEsperado:'6901028075763',icone:'upc-scan'},
+    {ordem:4,nome:'Firmware - Versão',valorEsperado:'',icone:'cpu'}
+  ];
+}
+function renderStepsCodigos(codigos){
+  const container=document.getElementById('stepsContainer');
+  document.getElementById('totalCodigos').innerText=codigos.length;
+  container.innerHTML=codigos.map((c,i)=>{
+    const idx=i+1;
+    const esperado=c.valorEsperado?`Esperado: ${c.valorEsperado}`:'Qualquer leitura';
+    return `<div class="step-card" id="step${idx}"><div class="d-flex justify-content-between"><div><b>${idx} - ${c.nome}</b><br><small class="text-muted">${esperado}</small></div><small id="lido${idx}"></small></div><input id="input${idx}" class="form-control input-leitura mt-2" placeholder="${idx===1?'Bipe: '+c.nome:'Aguardando '+c.nome}" ${idx!==1?'disabled':''}></div>`;
+  }).join('');
+  document.querySelectorAll('.input-leitura').forEach((inp,i)=>{
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();validarLeitura(i+1,inp.value.trim());}});
+  });
+}
+function iniciarSequencia(){
+  if(!localStorage.getItem('config_fixa_teste')){alert('Salve a configuração');return;}
+  const serie=document.getElementById('serieSel').value.trim();
+  if(!serie){alert('Digite o NÚMERO DE SÉRIE');return;}
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste'));
+  listaCodigosProduto=getCodigosDoProduto(cfg.produto);
+  codigosEsperados={}; listaCodigosProduto.forEach((c,idx)=>{codigosEsperados[idx+1]=c.valorEsperado||null;});
+  renderStepsCodigos(listaCodigosProduto);
+  inicioTimestamp=new Date();
+  document.getElementById('horaInicio').innerText=inicioTimestamp.toLocaleTimeString('pt-BR');
+  document.getElementById('infoResumo').innerText=`${cfg.produto} | ${cfg.modelo} | Op: ${cfg.operador} | Série: ${serie}`;
+  dadosTeste={produto:cfg.produto,operador:cfg.operador,modelo:cfg.modelo,serie:serie,leituras:{},inicio:inicioTimestamp.toISOString(),codigosNomes:listaCodigosProduto};
+  document.getElementById('areaSequencia').style.display='block';
+  document.getElementById('resultadoFinal').style.display='none';
+  document.getElementById('comprovante').style.display='none';
+  document.getElementById('areaLogTerminal').style.display='none';
+  document.getElementById('msgAutoVolta').style.display='none';
+  document.getElementById('cardSerie').style.display='none';
+  ativarStep(1);
+}
+function ativarStep(n){stepAtual=n;document.querySelectorAll('.step-card').forEach((c,i)=>{c.classList.remove('ativo');if(i+1===n) c.classList.add('ativo');});let inp=document.getElementById('input'+n);if(!inp) return;inp.disabled=false;inp.classList.add('scan-ativo');inp.focus();}
+function validarLeitura(step,codigo){
+  if(!codigo) return;
+  let esp=codigosEsperados[step];let ok=!esp||codigo.replace(/\s/g,'')===esp.replace(/\s/g,'');
+  let inp=document.getElementById('input'+step);inp.value=codigo;inp.classList.remove('scan-ativo');
+  document.getElementById('lido'+step).innerHTML=(ok?'✅ '+codigo:'❌ '+codigo);
+  document.getElementById('step'+step).classList.add(ok?'concluido':'erro');inp.disabled=true;
+  dadosTeste.leituras[step]={codigo,correto:ok,esperado:esp||'LIVRE',nome:listaCodigosProduto[step-1]?.nome||'',timestamp:new Date().toISOString(),hora:new Date().toLocaleTimeString('pt-BR')};
+  if(step < listaCodigosProduto.length) setTimeout(()=>ativarStep(step+1),400); else setTimeout(()=>finalizar(),400);
+}
+async function finalizar(){
+  let fim=new Date();let todos=Object.values(dadosTeste.leituras).every(l=>l.correto);let res=todos?'APROVADO':'REPROVADO';let dur=((fim-inicioTimestamp)/1000).toFixed(1);
+  let teste={id:Date.now().toString(),data:fim.toISOString(),produtoCodigo:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,resultado:res,leituras:dadosTeste.leituras,duracao:dur};
+  let testes=JSON.parse(localStorage.getItem('testes')||'[]');testes.unshift(teste);localStorage.setItem('testes',JSON.stringify(testes));
+  let log={log_id:'LOG-'+fim.toISOString().slice(0,10).replace(/-/g,'')+'-'+teste.id.slice(-6),teste_id:teste.id,inicio_br:new Date(dadosTeste.inicio).toLocaleString('pt-BR'),fim_br:fim.toLocaleString('pt-BR'),produto:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,resultado:res,duracao_segundos:dur,leituras:dadosTeste.leituras,codigosNomes:dadosTeste.codigosNomes,hash:btoa(teste.id+'|'+dadosTeste.serie+'|'+res).slice(0,32).toUpperCase()};
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');logs.unshift(log);localStorage.setItem('logs_evidencia',JSON.stringify(logs));window._ultimoLog=log;
+  document.getElementById('resultadoFinal').style.display='block';
+  document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center ${todos?'bg-success':'bg-danger'} text-white"><h3>${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Etiqueta será impressa automaticamente...</span></div></div>`;
+  preencher(log);
+  atualizarContadorTotal();
+  
+  // === VINCULO ETIQUETA + AUTO IMPRESSÃO ===
+  try{
+    salvarEtiquetaParaImpressao(log);
+    const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
+    const deveImprimir = (chkAuto && chkAuto.checked);
+    if(deveImprimir){
+      // Imprime direto sem modal, abre etiqueta que já dá print automático
+      setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800);
+    } else {
+      // Só mostra modal
+      setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500);
+    }
+  }catch(e){ console.log('Erro auto print etiqueta', e); }
+  
+  if(document.getElementById('chkAutoSalvar').checked){ await salvarLogNaRede(log); }
+  if(document.getElementById('chkAutoVolta').checked){ iniciarContagemRegressivaParaSerie(); }
+}
+
+function imprimirEtiquetaAuto(log){
+  const etiqueta = salvarEtiquetaParaImpressao(log);
+  const params = new URLSearchParams({
+    autoPrint:'1', 
+    codigo: etiqueta.codigo||'', 
+    serie: etiqueta.serie||'', 
+    ean13: etiqueta.ean13||'', 
+    descricao: etiqueta.descricao||'', 
+    modelo: etiqueta.modelo||'',
+    operador: etiqueta.operador||'',
+    resultado: etiqueta.resultado||''
+  });
+  const url = 'etiquetas.html?'+params.toString();
+  console.log('Abrindo etiqueta para impressão automática:', url);
+  const win = window.open(url, '_blank', 'width=900,height=700');
+  if(!win){
+    const iframe = document.createElement('iframe');
+    iframe.style.position='fixed';
+    iframe.style.right='0'; iframe.style.bottom='0';
+    iframe.style.width='400px'; iframe.style.height='300px';
+    iframe.style.border='2px solid #198754';
+    iframe.src=url;
+    document.body.appendChild(iframe);
+    const aviso = document.createElement('div');
+    aviso.style.position='fixed'; aviso.style.right='10px'; aviso.style.bottom='320px';
+    aviso.style.background='#198754'; aviso.style.color='white'; aviso.style.padding='8px 12px'; aviso.style.borderRadius='8px'; aviso.style.zIndex='9999';
+    aviso.innerHTML='🖨️ Imprimindo etiqueta...<br><small>Se bloqueou popup, use o iframe abaixo</small>';
+    document.body.appendChild(aviso);
+    setTimeout(()=>{ iframe.remove(); aviso.remove(); }, 15000);
+  }
+}
+
+function gerarNomeArquivo(log, ext){return `${log.log_id}_${sanitizeNome(log.produto)}_${sanitizeNome(log.modelo)}_${sanitizeNome(log.serie)}_${sanitizeNome(log.resultado)}.${ext}`;}
+function preencher(log){
+  document.getElementById('comprovante').style.display='block';document.getElementById('areaLogTerminal').style.display='block';
+  document.getElementById('compResultado').innerText=log.resultado;document.getElementById('compID').innerText=log.log_id;
+  document.getElementById('c_inicio').innerText=log.inicio_br;document.getElementById('c_fim').innerText=log.fim_br;
+  document.getElementById('c_prod').innerText=log.produto;document.getElementById('c_model').innerText=log.modelo;
+  document.getElementById('c_serie').innerText=log.serie;document.getElementById('c_oper').innerText=log.operador;
+  document.getElementById('c_dur').innerText=log.duracao_segundos+'s';document.getElementById('c_hash').innerText=log.hash;
+  document.getElementById('nomeArquivoGerado').innerText=gerarNomeArquivo(log,'txt');
+  document.getElementById('c_leituras').innerHTML=Object.entries(log.leituras).map(([k,v])=>{
+    let nome=v.nome||(log.codigosNomes||[])[parseInt(k)-1]?.nome||`Código ${k}`;
+    return `<tr><td>${k} - ${nome}</td><td>${v.esperado}</td><td style="font-family:monospace;">${v.codigo}</td><td>${v.correto?'OK':'FALHA'}</td><td>${v.hora}</td></tr>`;
+  }).join('');
+  const txt=`ARQUIVO: ${gerarNomeArquivo(log,'txt')}\nLOG_ID: ${log.log_id}\nCODIGO: ${log.produto}\nMODELO: ${log.modelo}\nSERIE: ${log.serie}\nOPERADOR: ${log.operador}\nRESULTADO: ${log.resultado}\n`+Object.entries(log.leituras).map(([k,v])=>` ${k}. [${v.nome}] ${v.esperado} => ${v.codigo} [${v.correto?'OK':'FALHA'}]`).join('\n');
+  document.getElementById('logTerminal').innerText=txt;window._textoLogAtual=txt;
+}
+function iniciarContagemRegressivaParaSerie(){
+  let segundos=3;
+  document.getElementById('msgAutoVolta').style.display='block';
+  document.getElementById('contadorRegressivo').innerText=segundos;
+  document.getElementById('cardSerie').classList.add('piscar');
+  if(contadorInterval) clearInterval(contadorInterval);
+  contadorInterval=setInterval(()=>{
+    segundos--;
+    document.getElementById('contadorRegressivo').innerText=segundos;
+    if(segundos<=0){clearInterval(contadorInterval);voltarParaSerieAutomatico();}
+  },1000);
+}
+function voltarParaSerieAutomatico(){
+  document.getElementById('serieSel').value='';
+  document.getElementById('areaSequencia').style.display='none';
+  document.getElementById('resultadoFinal').style.display='none';
+  document.getElementById('msgAutoVolta').style.display='none';
+  document.getElementById('cardSerie').style.display='block';
+  document.getElementById('cardSerie').classList.remove('piscar');
+  document.getElementById('cardSerie').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>{document.getElementById('serieSel').focus();},300);
+  atualizarContadorTotal();
+}
+function voltarParaSerieManual(){if(contadorInterval) clearInterval(contadorInterval);voltarParaSerieAutomatico();}
+function atualizarContadorTotal(){
+  const testes=JSON.parse(localStorage.getItem('testes')||'[]');
+  const hoje=new Date().toISOString().slice(0,10);
+  const hojeQtd=testes.filter(t=>t.data && t.data.slice(0,10)===hoje).length;
+  document.getElementById('contadorTotal').innerText=`Total: ${testes.length} | Hoje: ${hojeQtd}`;
+  const el=document.getElementById('totalHoje'); if(el) el.innerText=hojeQtd;
+}
+function baixarLogTXT(){ if(!window._ultimoLog) return; const blob=new Blob([window._textoLogAtual],{type:'text/plain'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=gerarNomeArquivo(window._ultimoLog,'txt');a.click(); }
+
+// ===== COMPARTILHAMENTO MULTI-PC =====
+async function salvarProdutosNaRede(){
+  try{
+    const produtos = localStorage.getItem('produtos');
+    const operadores = localStorage.getItem('operadores');
+    
+    // Tenta salvar na pasta de config da rede
+    if(!dirHandleConfig){
+      if(!window.showDirectoryPicker){ 
+        // Fallback: baixa arquivo para copiar manualmente
+        exportarProdutos();
+        alert('Selecione a pasta \\\\10.50.1.143\\Volume_1\\log leitores\\config\\ na próxima janela para salvar direto na rede');
+        dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+      } else {
+        document.getElementById('statusShare').innerHTML='Selecione a pasta de rede para salvar...<br>Use: \\\\10.50.1.143\\Volume_1\\log leitores\\config\\';
+        dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+      }
+    }
+    
+    await dirHandleConfig.requestPermission({mode:'readwrite'});
+    
+    // Salva produtos.json
+    let fileProd = await dirHandleConfig.getFileHandle('produtos.json', {create:true});
+    let writer = await fileProd.createWritable();
+    await writer.write(produtos);
+    await writer.close();
+    
+    // Salva operadores.json
+    let fileOp = await dirHandleConfig.getFileHandle('operadores.json', {create:true});
+    writer = await fileOp.createWritable();
+    await writer.write(operadores);
+    await writer.close();
+    
+    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos salvos na rede!<br>Arquivo: produtos.json em '+dirHandleConfig.name+'<br>Todos os PCs podem carregar agora.</span>';
+    
+  }catch(e){
+    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'<br>Use Exportar e copie manualmente para a pasta da rede.</span>';
+  }
+}
+
+async function carregarProdutosDaRede(){
+  try{
+    if(!dirHandleConfig){
+      document.getElementById('statusShare').innerHTML='Selecione a pasta com produtos.json...';
+      dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+    }
+    
+    let fileProd = await dirHandleConfig.getFileHandle('produtos.json');
+    let file = await fileProd.getFile();
+    let text = await file.text();
+    let produtos = JSON.parse(text);
+    
+    localStorage.setItem('produtos', JSON.stringify(produtos));
+    
+    try{
+      let fileOp = await dirHandleConfig.getFileHandle('operadores.json');
+      let file2 = await fileOp.getFile();
+      let text2 = await file2.text();
+      localStorage.setItem('operadores', text2);
+    }catch{}
+    
+    carregarProdutos();
+    carregarOperadores();
+    
+    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos carregados da rede! Total: '+produtos.length+' produtos<br>Agora este PC está sincronizado.</span>';
+    
+  }catch(e){
+    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro ao carregar: '+e.message+'<br>Tente usar Importar arquivo.</span>';
+  }
+}
+
+function exportarProdutos(){
+  const produtos = localStorage.getItem('produtos')||'[]';
+  const blob = new Blob([produtos], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'produtos.json';
+  a.click();
+  
+  const ops = localStorage.getItem('operadores')||'[]';
+  const blob2 = new Blob([ops], {type:'application/json'});
+  const a2 = document.createElement('a');
+  a2.href = URL.createObjectURL(blob2);
+  a2.download = 'operadores.json';
+  a2.click();
+  
+  document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Arquivos exportados! Copie produtos.json e operadores.json para<br>\\\\10.50.1.143\\Volume_1\\log leitores\\config\\<br>Ou para a mesma pasta do testes.html</span>';
+}
+
+function importarJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(file.name.includes('operador')){
+        localStorage.setItem('operadores', JSON.stringify(data));
+        carregarOperadores();
+        alert('Operadores importados: '+data.length);
+      }else{
+        localStorage.setItem('produtos', JSON.stringify(data));
+        carregarProdutos();
+        alert('Produtos importados: '+data.length);
+      }
+      document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Importado de '+file.name+': '+data.length+' itens</span>';
+    }catch(err){ alert('Erro no JSON: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function forcarRecarregarTudo(){
+  inicializarDadosCompartilhados().then(()=>{
+    carregarProdutos();
+    carregarOperadores();
+    document.getElementById('statusShare').innerHTML+='<br>🔄 Listas recarregadas!';
+  });
+}
+
+// ===== REDE LOGS =====
+async function selecionarPastaRede(){
+  try{
+    if(!window.showDirectoryPicker){ alert('Use Chrome/Edge'); return; }
+    dirHandleRede=await window.showDirectoryPicker({mode:'readwrite'});
+    await dirHandleRede.requestPermission({mode:'readwrite'});
+    document.getElementById('caminhoRede').value=dirHandleRede.name+' -> \\\\10.50.1.143\\Volume_1\\log leitores';
+    document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Pasta: <b>'+dirHandleRede.name+'</b></span>';
+    salvarHandleIDB(dirHandleRede, 'pastaRede');
+    // Tenta usar mesma pasta para config
+    dirHandleConfig = dirHandleRede;
+    try{
+      dirHandleConfig = await dirHandleRede.getDirectoryHandle('config', {create:true});
+      document.getElementById('statusShare').innerHTML+='<br>✅ Pasta config encontrada/criada';
+    }catch{}
+  }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ '+e.message+'</span>'; }
+}
+async function forcarSalvarRede(){ if(!window._ultimoLog) return alert('Faça um teste'); await salvarLogNaRede(window._ultimoLog); }
+async function testarPastaRede(){
+  if(!dirHandleRede){ let h=await restaurarHandleIDB('pastaRede'); if(!h) return alert('Selecione a pasta'); }
+  try{ let f=await dirHandleRede.getFileHandle('TESTE_'+Date.now()+'.txt',{create:true}); let w=await f.createWritable(); await w.write('TESTE OK '+new Date().toLocaleString('pt-BR')); await w.close(); document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Teste OK em '+dirHandleRede.name+'</span>'; }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ '+e.message+'</span>'; }
+}
+async function salvarLogNaRede(log){
+  if(!dirHandleRede){ dirHandleRede=await restaurarHandleIDB('pastaRede'); if(!dirHandleRede){ document.getElementById('statusPasta').innerHTML='⚠️ Selecione a pasta'; return; } }
+  try{
+    let dataHoje=new Date().toISOString().slice(0,10);
+    let pasta=dirHandleRede;
+    try{ pasta=await dirHandleRede.getDirectoryHandle('LOGS_'+dataHoje,{create:true}); }catch{}
+    let nomeTXT=gerarNomeArquivo(log,'txt');
+    let nomeJSON=gerarNomeArquivo(log,'json');
+    let f1=await pasta.getFileHandle(nomeTXT,{create:true}); let w1=await f1.createWritable(); await w1.write(window._textoLogAtual); await w1.close();
+    let f2=await pasta.getFileHandle(nomeJSON,{create:true}); let w2=await f2.createWritable(); await w2.write(JSON.stringify(log,null,2)); await w2.close();
+    document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Salvo: '+nomeTXT+'</span>';
+    document.getElementById('statusSalvoRede').innerHTML='<span class="text-success">✅ Salvo na rede: '+pasta.name+'/'+nomeTXT+'</span>';
+  }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'</span>'; }
+}
+function salvarHandleIDB(h, key='pastaRede'){ try{ let r=indexedDB.open('elgin_logs_db',1); r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('handles');}catch{}}; r.onsuccess=()=>{ try{ let db=r.result; let tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(h,key); }catch{} }; }catch{} }
+function restaurarHandleIDB(key='pastaRede'){ return new Promise(res=>{ try{ let r=indexedDB.open('elgin_logs_db',1); r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('handles');}catch{}}; r.onsuccess=()=>{ try{ let db=r.result; if(!db.objectStoreNames.contains('handles')){res(null);return;} let tx=db.transaction('handles','readonly'); let g=tx.objectStore('handles').get(key); g.onsuccess=()=>{ if(g.result){ if(key==='pastaRede') dirHandleRede=g.result; else dirHandleConfig=g.result; res(g.result);}else res(null); }; g.onerror=()=>res(null); }catch{res(null);} }; r.onerror=()=>res(null);}catch{res(null);} }); }
+</script>
+</body>
+</html>
