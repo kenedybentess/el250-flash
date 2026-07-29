@@ -30,7 +30,7 @@
 <div class="card config-share mb-3 no-print" id="cardShare">
 <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
 <b><i class="bi bi-share"></i> CADASTRO ÚNICO PARA VÁRIOS COMPUTADORES</b>
-<small class="badge bg-dark">Usando: \10.50.1.143\Volume_1\log leitores\config\</small>
+<small class="badge bg-dark">Usando: \\10.50.1.143\Volume_1\log leitores\config\</small>
 </div>
 <div class="card-body py-2">
 <div class="row g-2 align-items-center">
@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 async function inicializarDadosCompartilhados(){
+  // Tenta carregar do servidor (se rodar via http://) primeiro - MELHOR PARA MULTI-PC
   try{
     const respProd = await fetch('./produtos.json?_='+Date.now());
     if(respProd.ok){
@@ -153,9 +154,10 @@ async function inicializarDadosCompartilhados(){
       if(produtos.length>0){
         localStorage.setItem('produtos', JSON.stringify(produtos));
         document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos carregados de <b>produtos.json</b> (servidor compartilhado)<br>Todos os PCs usando mesmo arquivo!</span>';
+        console.log('Produtos carregados via fetch produtos.json');
       }
     }
-  }catch(e){}
+  }catch(e){ console.log('Sem produtos.json no servidor, usando localStorage'); }
 
   try{
     const respOp = await fetch('./operadores.json?_='+Date.now());
@@ -165,6 +167,7 @@ async function inicializarDadosCompartilhados(){
     }
   }catch(e){}
 
+  // Fallback localStorage
   let produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
   if(produtos.length===0){
     produtos=[
@@ -176,6 +179,7 @@ async function inicializarDadosCompartilhados(){
       ]}
     ];
     localStorage.setItem('produtos',JSON.stringify(produtos));
+    document.getElementById('statusShare').innerHTML='<span class="text-warning">⚠️ Produtos padrão criados localmente.<br>Clique em <b>Salvar Produtos na Rede</b> para compartilhar.</span>';
   }
   let ops=JSON.parse(localStorage.getItem('operadores')||'[]');
   if(ops.length===0){
@@ -230,6 +234,7 @@ function atualizarEtiquetaAuto(){
     const serie = document.getElementById('serieSel')?.value?.trim() || '';
     const operador = cfg.operador || document.getElementById('operadorSel')?.value || '';
 
+    // Busca produto completo para pegar nome e ean13
     const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
     const prod=produtos.find(p=>p.codigo===produtoCodigo) || {};
     const nome = prod.nome || produtoCodigo;
@@ -245,7 +250,9 @@ function atualizarEtiquetaAuto(){
       atualizadoEm: new Date().toISOString()
     };
     localStorage.setItem('etiqueta_auto', JSON.stringify(etiquetaAuto));
-  }catch(e){}
+    // Também mantém compatibilidade com etiqueta_estado
+    // console.log('Etiqueta auto atualizada', etiquetaAuto);
+  }catch(e){ console.log('Erro etiqueta auto', e); }
 }
 
 function salvarEtiquetaParaImpressao(log){
@@ -270,30 +277,56 @@ function salvarEtiquetaParaImpressao(log){
   }catch(e){ return null; }
 }
 
-function imprimirEtiquetaAuto(log){
+function solicitarImpressaoEtiqueta(log){
   const etiqueta = salvarEtiquetaParaImpressao(log);
-  const params = new URLSearchParams({
-    autoPrint:'1', 
-    codigo: etiqueta.codigo||'', 
-    serie: etiqueta.serie||'', 
-    ean13: etiqueta.ean13||'', 
-    descricao: etiqueta.descricao||'', 
-    modelo: etiqueta.modelo||'',
-    operador: etiqueta.operador||'',
-    resultado: etiqueta.resultado||''
-  });
-  const url = 'etiquetas.html?'+params.toString();
-  const win = window.open(url, '_blank', 'width=900,height=700');
-  if(!win){
-    const iframe = document.createElement('iframe');
-    iframe.style.position='fixed';
-    iframe.style.right='0'; iframe.style.bottom='0';
-    iframe.style.width='400px'; iframe.style.height='300px';
-    iframe.style.border='2px solid #198754';
-    iframe.src=url;
-    document.body.appendChild(iframe);
-    setTimeout(()=>{ iframe.remove(); }, 15000);
-  }
+  // Cria modal se não existir
+  let modalExist = document.getElementById('modalImpressaoEtiqueta');
+  if(modalExist) modalExist.remove();
+  const isAprovado = log.resultado==='APROVADO';
+  const modalHtml = `
+  <div id="modalImpressaoEtiqueta" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:16px;max-width:480px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,0.3);overflow:hidden;animation: popIn 0.3s ease">
+      <div style="background:${isAprovado?'linear-gradient(135deg,#198754,#20c997)':'linear-gradient(135deg,#dc3545,#fd7e14)'};color:white;padding:18px;text-align:center">
+        <div style="font-size:42px">${isAprovado?'✅':'❌'}</div>
+        <h4 style="margin:8px 0">Teste ${log.resultado}</h4>
+        <small>${log.produto} | S/N: ${log.serie}</small>
+      </div>
+      <div style="padding:20px">
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px">
+          <div><b>Produto:</b> ${etiqueta.descricao} (${etiqueta.codigo})</div>
+          <div><b>Modelo:</b> ${etiqueta.modelo}</div>
+          <div><b>Série:</b> <span style="font-weight:900;letter-spacing:1px">${etiqueta.serie}</span></div>
+          ${etiqueta.ean13?`<div><b>EAN13:</b> ${etiqueta.ean13}</div>`:''}
+          <div><b>Operador:</b> ${etiqueta.operador}</div>
+        </div>
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">
+          🔗 <b>Etiqueta vinculada</b> ao teste. Ao imprimir, o número de série <b>${etiqueta.serie}</b> será usado automaticamente.
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="fecharModalImpressaoEtiqueta()" style="flex:1;padding:12px;border:1px solid #dee2e6;border-radius:8px;background:white;font-weight:bold;cursor:pointer">Continuar sem imprimir</button>
+          <button onclick="abrirEtiquetaParaImpressao()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#0d6efd;color:white;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(13,110,253,0.3)">🖨️ Imprimir Etiqueta</button>
+        </div>
+        <div style="text-align:center;margin-top:10px">
+          <small class="text-muted">A etiqueta abrirá em nova aba com dados preenchidos</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes popIn{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}</style>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  // Som de bip opcional
+  try{ const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRyAgAAAAA='); audio.play().catch(()=>{});}catch{}
+}
+
+function fecharModalImpressaoEtiqueta(){
+  const m=document.getElementById('modalImpressaoEtiqueta');
+  if(m) m.remove();
+}
+
+function abrirEtiquetaParaImpressao(){
+  imprimirEtiquetaAuto(window._ultimoLog);
+  fecharModalImpressaoEtiqueta();
 }
 
 function salvarConfigFixa(){
@@ -309,7 +342,7 @@ function salvarConfigFixa(){
 }
 function bloquearConfig(b){document.getElementById('produtoSel').disabled=b;document.getElementById('operadorSel').disabled=b;document.getElementById('modeloSel').disabled=b;}
 function editarConfigFixa(){bloquearConfig(false);document.getElementById('statusConfig').innerText='Editando...';document.getElementById('statusConfig').className='badge bg-warning text-dark';}
-function sanitizeNome(s){return (s||'').toString().replace(/[\/:*?"<>|]/g,'-').replace(/\s+/g,'_').slice(0,40);}
+function sanitizeNome(s){return (s||'').toString().replace(/[\\\/:*?"<>|]/g,'-').replace(/\s+/g,'_').slice(0,40);}
 function getCodigosDoProduto(codigoProduto){
   const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
   const prod=produtos.find(p=>p.codigo===codigoProduto);
@@ -369,22 +402,62 @@ async function finalizar(){
   let testes=JSON.parse(localStorage.getItem('testes')||'[]');testes.unshift(teste);localStorage.setItem('testes',JSON.stringify(testes));
   let log={log_id:'LOG-'+fim.toISOString().slice(0,10).replace(/-/g,'')+'-'+teste.id.slice(-6),teste_id:teste.id,inicio_br:new Date(dadosTeste.inicio).toLocaleString('pt-BR'),fim_br:fim.toLocaleString('pt-BR'),produto:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,resultado:res,duracao_segundos:dur,leituras:dadosTeste.leituras,codigosNomes:dadosTeste.codigosNomes,hash:btoa(teste.id+'|'+dadosTeste.serie+'|'+res).slice(0,32).toUpperCase()};
   let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');logs.unshift(log);localStorage.setItem('logs_evidencia',JSON.stringify(logs));window._ultimoLog=log;
-  
   document.getElementById('resultadoFinal').style.display='block';
-  document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center ${todos?'bg-success':'bg-danger'} text-white"><h3>${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Gerando e imprimindo etiqueta automaticamente...</span></div></div>`;
+  document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center ${todos?'bg-success':'bg-danger'} text-white"><h3>${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Etiqueta será impressa automaticamente...</span></div></div>`;
   preencher(log);
   atualizarContadorTotal();
   
-  // === GERAR E IMPRIMIR ETAGUETA AUTOMATICAMENTE AO FINALIZAR (1 CÓPIA) ===
+  // === VINCULO ETIQUETA + AUTO IMPRESSÃO ===
   try{
-    imprimirEtiquetaAuto(log);
-  }catch(e){ console.log('Erro ao imprimir etiqueta auto', e); }
+    salvarEtiquetaParaImpressao(log);
+    const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
+    const deveImprimir = (chkAuto && chkAuto.checked);
+    if(deveImprimir){
+      // Imprime direto sem modal, abre etiqueta que já dá print automático
+      setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800);
+    } else {
+      // Só mostra modal
+      setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500);
+    }
+  }catch(e){ console.log('Erro auto print etiqueta', e); }
   
   if(document.getElementById('chkAutoSalvar').checked){ await salvarLogNaRede(log); }
   if(document.getElementById('chkAutoVolta').checked){ iniciarContagemRegressivaParaSerie(); }
 }
 
-function gerarnomearquivo(log, ext){return `${log.log_id}_${sanitizeNome(log.produto)}_${sanitizeNome(log.modelo)}_${sanitizeNome(log.serie)}_${sanitizeNome(log.resultado)}.${ext}`;}
+function imprimirEtiquetaAuto(log){
+  const etiqueta = salvarEtiquetaParaImpressao(log);
+  const params = new URLSearchParams({
+    autoPrint:'1', 
+    codigo: etiqueta.codigo||'', 
+    serie: etiqueta.serie||'', 
+    ean13: etiqueta.ean13||'', 
+    descricao: etiqueta.descricao||'', 
+    modelo: etiqueta.modelo||'',
+    operador: etiqueta.operador||'',
+    resultado: etiqueta.resultado||''
+  });
+  const url = 'etiquetas.html?'+params.toString();
+  console.log('Abrindo etiqueta para impressão automática:', url);
+  const win = window.open(url, '_blank', 'width=900,height=700');
+  if(!win){
+    const iframe = document.createElement('iframe');
+    iframe.style.position='fixed';
+    iframe.style.right='0'; iframe.style.bottom='0';
+    iframe.style.width='400px'; iframe.style.height='300px';
+    iframe.style.border='2px solid #198754';
+    iframe.src=url;
+    document.body.appendChild(iframe);
+    const aviso = document.createElement('div');
+    aviso.style.position='fixed'; aviso.style.right='10px'; aviso.style.bottom='320px';
+    aviso.style.background='#198754'; aviso.style.color='white'; aviso.style.padding='8px 12px'; aviso.style.borderRadius='8px'; aviso.style.zIndex='9999';
+    aviso.innerHTML='🖨️ Imprimindo etiqueta...<br><small>Se bloqueou popup, use o iframe abaixo</small>';
+    document.body.appendChild(aviso);
+    setTimeout(()=>{ iframe.remove(); aviso.remove(); }, 15000);
+  }
+}
+
+function gerarNomeArquivo(log, ext){return `${log.log_id}_${sanitizeNome(log.produto)}_${sanitizeNome(log.modelo)}_${sanitizeNome(log.serie)}_${sanitizeNome(log.resultado)}.${ext}`;}
 function preencher(log){
   document.getElementById('comprovante').style.display='block';document.getElementById('areaLogTerminal').style.display='block';
   document.getElementById('compResultado').innerText=log.resultado;document.getElementById('compID').innerText=log.log_id;
@@ -433,41 +506,74 @@ function atualizarContadorTotal(){
 }
 function baixarLogTXT(){ if(!window._ultimoLog) return; const blob=new Blob([window._textoLogAtual],{type:'text/plain'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=gerarNomeArquivo(window._ultimoLog,'txt');a.click(); }
 
+// ===== COMPARTILHAMENTO MULTI-PC =====
 async function salvarProdutosNaRede(){
   try{
     const produtos = localStorage.getItem('produtos');
     const operadores = localStorage.getItem('operadores');
+    
+    // Tenta salvar na pasta de config da rede
     if(!dirHandleConfig){
-      dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+      if(!window.showDirectoryPicker){ 
+        // Fallback: baixa arquivo para copiar manualmente
+        exportarProdutos();
+        alert('Selecione a pasta \\\\10.50.1.143\\Volume_1\\log leitores\\config\\ na próxima janela para salvar direto na rede');
+        dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+      } else {
+        document.getElementById('statusShare').innerHTML='Selecione a pasta de rede para salvar...<br>Use: \\\\10.50.1.143\\Volume_1\\log leitores\\config\\';
+        dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
+      }
     }
+    
     await dirHandleConfig.requestPermission({mode:'readwrite'});
+    
+    // Salva produtos.json
     let fileProd = await dirHandleConfig.getFileHandle('produtos.json', {create:true});
     let writer = await fileProd.createWritable();
     await writer.write(produtos);
     await writer.close();
+    
+    // Salva operadores.json
     let fileOp = await dirHandleConfig.getFileHandle('operadores.json', {create:true});
     writer = await fileOp.createWritable();
     await writer.write(operadores);
     await writer.close();
-    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos salvos na rede!</span>';
+    
+    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos salvos na rede!<br>Arquivo: produtos.json em '+dirHandleConfig.name+'<br>Todos os PCs podem carregar agora.</span>';
+    
   }catch(e){
-    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'</span>';
+    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'<br>Use Exportar e copie manualmente para a pasta da rede.</span>';
   }
 }
 
 async function carregarProdutosDaRede(){
   try{
     if(!dirHandleConfig){
+      document.getElementById('statusShare').innerHTML='Selecione a pasta com produtos.json...';
       dirHandleConfig = await window.showDirectoryPicker({mode:'readwrite'});
     }
+    
     let fileProd = await dirHandleConfig.getFileHandle('produtos.json');
     let file = await fileProd.getFile();
     let text = await file.text();
-    localStorage.setItem('produtos', text);
+    let produtos = JSON.parse(text);
+    
+    localStorage.setItem('produtos', JSON.stringify(produtos));
+    
+    try{
+      let fileOp = await dirHandleConfig.getFileHandle('operadores.json');
+      let file2 = await fileOp.getFile();
+      let text2 = await file2.text();
+      localStorage.setItem('operadores', text2);
+    }catch{}
+    
     carregarProdutos();
-    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos carregados da rede!</span>';
+    carregarOperadores();
+    
+    document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Produtos carregados da rede! Total: '+produtos.length+' produtos<br>Agora este PC está sincronizado.</span>';
+    
   }catch(e){
-    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'</span>';
+    document.getElementById('statusShare').innerHTML='<span class="text-danger">❌ Erro ao carregar: '+e.message+'<br>Tente usar Importar arquivo.</span>';
   }
 }
 
@@ -478,6 +584,15 @@ function exportarProdutos(){
   a.href = URL.createObjectURL(blob);
   a.download = 'produtos.json';
   a.click();
+  
+  const ops = localStorage.getItem('operadores')||'[]';
+  const blob2 = new Blob([ops], {type:'application/json'});
+  const a2 = document.createElement('a');
+  a2.href = URL.createObjectURL(blob2);
+  a2.download = 'operadores.json';
+  a2.click();
+  
+  document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Arquivos exportados! Copie produtos.json e operadores.json para<br>\\\\10.50.1.143\\Volume_1\\log leitores\\config\\<br>Ou para a mesma pasta do testes.html</span>';
 }
 
 function importarJSON(event){
@@ -487,10 +602,17 @@ function importarJSON(event){
   reader.onload = (e)=>{
     try{
       const data = JSON.parse(e.target.result);
-      localStorage.setItem('produtos', JSON.stringify(data));
-      carregarProdutos();
-      alert('Produtos importados: '+data.length);
-    }catch(err){ alert('Erro: '+err.message); }
+      if(file.name.includes('operador')){
+        localStorage.setItem('operadores', JSON.stringify(data));
+        carregarOperadores();
+        alert('Operadores importados: '+data.length);
+      }else{
+        localStorage.setItem('produtos', JSON.stringify(data));
+        carregarProdutos();
+        alert('Produtos importados: '+data.length);
+      }
+      document.getElementById('statusShare').innerHTML='<span class="text-success">✅ Importado de '+file.name+': '+data.length+' itens</span>';
+    }catch(err){ alert('Erro no JSON: '+err.message); }
   };
   reader.readAsText(file);
 }
@@ -499,34 +621,45 @@ function forcarRecarregarTudo(){
   inicializarDadosCompartilhados().then(()=>{
     carregarProdutos();
     carregarOperadores();
+    document.getElementById('statusShare').innerHTML+='<br>🔄 Listas recarregadas!';
   });
 }
 
+// ===== REDE LOGS =====
 async function selecionarPastaRede(){
   try{
     if(!window.showDirectoryPicker){ alert('Use Chrome/Edge'); return; }
     dirHandleRede=await window.showDirectoryPicker({mode:'readwrite'});
     await dirHandleRede.requestPermission({mode:'readwrite'});
-    document.getElementById('caminhoRede').value=dirHandleRede.name;
-    document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Pasta selecionada</span>';
+    document.getElementById('caminhoRede').value=dirHandleRede.name+' -> \\\\10.50.1.143\\Volume_1\\log leitores';
+    document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Pasta: <b>'+dirHandleRede.name+'</b></span>';
     salvarHandleIDB(dirHandleRede, 'pastaRede');
+    // Tenta usar mesma pasta para config
+    dirHandleConfig = dirHandleRede;
+    try{
+      dirHandleConfig = await dirHandleRede.getDirectoryHandle('config', {create:true});
+      document.getElementById('statusShare').innerHTML+='<br>✅ Pasta config encontrada/criada';
+    }catch{}
   }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ '+e.message+'</span>'; }
 }
 async function forcarSalvarRede(){ if(!window._ultimoLog) return alert('Faça um teste'); await salvarLogNaRede(window._ultimoLog); }
 async function testarPastaRede(){
   if(!dirHandleRede){ let h=await restaurarHandleIDB('pastaRede'); if(!h) return alert('Selecione a pasta'); }
-  try{ let f=await dirHandleRede.getFileHandle('TESTE_'+Date.now()+'.txt',{create:true}); let w=await f.createWritable(); await w.write('TESTE OK'); await w.close(); document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Teste OK</span>'; }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ '+e.message+'</span>'; }
+  try{ let f=await dirHandleRede.getFileHandle('TESTE_'+Date.now()+'.txt',{create:true}); let w=await f.createWritable(); await w.write('TESTE OK '+new Date().toLocaleString('pt-BR')); await w.close(); document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Teste OK em '+dirHandleRede.name+'</span>'; }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ '+e.message+'</span>'; }
 }
 async function salvarLogNaRede(log){
-  if(!dirHandleRede){ dirHandleRede=await restaurarHandleIDB('pastaRede'); if(!dirHandleRede) return; }
+  if(!dirHandleRede){ dirHandleRede=await restaurarHandleIDB('pastaRede'); if(!dirHandleRede){ document.getElementById('statusPasta').innerHTML='⚠️ Selecione a pasta'; return; } }
   try{
     let dataHoje=new Date().toISOString().slice(0,10);
     let pasta=dirHandleRede;
     try{ pasta=await dirHandleRede.getDirectoryHandle('LOGS_'+dataHoje,{create:true}); }catch{}
     let nomeTXT=gerarNomeArquivo(log,'txt');
-    let f1=await pasta.getFileHandle(nomeTXT,{create:true}); let w1=await f1.createWritable(); await w1.write(window._textologAtual); await w1.close();
-    document.getElementById('statusSalvoRede').innerHTML='<span class="text-success">✅ Salvo na rede: '+nomeTXT+'</span>';
-  }catch(e){}
+    let nomeJSON=gerarNomeArquivo(log,'json');
+    let f1=await pasta.getFileHandle(nomeTXT,{create:true}); let w1=await f1.createWritable(); await w1.write(window._textoLogAtual); await w1.close();
+    let f2=await pasta.getFileHandle(nomeJSON,{create:true}); let w2=await f2.createWritable(); await w2.write(JSON.stringify(log,null,2)); await w2.close();
+    document.getElementById('statusPasta').innerHTML='<span class="text-success">✅ Salvo: '+nomeTXT+'</span>';
+    document.getElementById('statusSalvoRede').innerHTML='<span class="text-success">✅ Salvo na rede: '+pasta.name+'/'+nomeTXT+'</span>';
+  }catch(e){ document.getElementById('statusPasta').innerHTML='<span class="text-danger">❌ Erro: '+e.message+'</span>'; }
 }
 function salvarHandleIDB(h, key='pastaRede'){ try{ let r=indexedDB.open('elgin_logs_db',1); r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('handles');}catch{}}; r.onsuccess=()=>{ try{ let db=r.result; let tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(h,key); }catch{} }; }catch{} }
 function restaurarHandleIDB(key='pastaRede'){ return new Promise(res=>{ try{ let r=indexedDB.open('elgin_logs_db',1); r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('handles');}catch{}}; r.onsuccess=()=>{ try{ let db=r.result; if(!db.objectStoreNames.contains('handles')){res(null);return;} let tx=db.transaction('handles','readonly'); let g=tx.objectStore('handles').get(key); g.onsuccess=()=>{ if(g.result){ if(key==='pastaRede') dirHandleRede=g.result; else dirHandleConfig=g.result; res(g.result);}else res(null); }; g.onerror=()=>res(null); }catch{res(null);} }; r.onerror=()=>res(null);}catch{res(null);} }); }
