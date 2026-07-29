@@ -408,27 +408,37 @@ async function finalizar(){
   atualizarContadorTotal();
   
   // === VINCULO ETIQUETA + AUTO IMPRESSÃO ===
-  try{
-    salvarEtiquetaParaImpressao(log);
-    const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
-    const deveImprimir = (chkAuto && chkAuto.checked);
-    if(deveImprimir){
-      // Imprime direto sem modal, abre etiqueta que já dá print automático
-      setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800);
-    } else {
-      // Só mostra modal
-      setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500);
-    }
-  }catch(e){ console.log('Erro auto print etiqueta', e); }
-  
-  if(document.getElementById('chkAutoSalvar').checked){ await salvarLogNaRede(log); }
-  if(document.getElementById('chkAutoVolta').checked){ iniciarContagemRegressivaParaSerie(); }
-}
+ // === VINCULO ETIQUETA + AUTO IMPRESSÃO - 1 COPIA SOMENTE ===
+try{
+  // Trava para garantir somente 1 etiqueta por finalização
+  window._etiquetaGeradaId = log.log_id;
+  salvarEtiquetaParaImpressao(log);
+  const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
+  const deveImprimir = (chkAuto && chkAuto.checked);
+  if(deveImprimir){
+    // Gera 1 cópia automaticamente ao finalizar
+    setTimeout(()=>{ 
+      if(window._etiquetaGeradaId === log.log_id){
+        imprimirEtiquetaAuto(log); 
+      }
+    }, 800);
+  } else {
+    setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500);
+  }
+}catch(e){ console.log('Erro auto print etiqueta', e); }
+
+...
 
 function imprimirEtiquetaAuto(log){
+  // GARANTE 1 COPIA - evita chamada dupla
+  if(window._imprimindoEtiqueta) return;
+  window._imprimindoEtiqueta = true;
+  setTimeout(()=>{ window._imprimindoEtiqueta = false; }, 3000);
+
   const etiqueta = salvarEtiquetaParaImpressao(log);
   const params = new URLSearchParams({
-    autoPrint:'1', 
+    autoPrint:'1',
+    copias:'1', // FORÇA SOMENTE 1 COPIA
     codigo: etiqueta.codigo||'', 
     serie: etiqueta.serie||'', 
     ean13: etiqueta.ean13||'', 
@@ -436,24 +446,7 @@ function imprimirEtiquetaAuto(log){
     modelo: etiqueta.modelo||'',
     operador: etiqueta.operador||'',
     resultado: etiqueta.resultado||''
-  });
-  const url = 'etiquetas.html?'+params.toString();
-  console.log('Abrindo etiqueta para impressão automática:', url);
-  const win = window.open(url, '_blank', 'width=900,height=700');
-  if(!win){
-    const iframe = document.createElement('iframe');
-    iframe.style.position='fixed';
-    iframe.style.right='0'; iframe.style.bottom='0';
-    iframe.style.width='400px'; iframe.style.height='300px';
-    iframe.style.border='2px solid #198754';
-    iframe.src=url;
-    document.body.appendChild(iframe);
-    const aviso = document.createElement('div');
-    aviso.style.position='fixed'; aviso.style.right='10px'; aviso.style.bottom='320px';
-    aviso.style.background='#198754'; aviso.style.color='white'; aviso.style.padding='8px 12px'; aviso.style.borderRadius='8px'; aviso.style.zIndex='9999';
-    aviso.innerHTML='🖨️ Imprimindo etiqueta...<br><small>Se bloqueou popup, use o iframe abaixo</small>';
-    document.body.appendChild(aviso);
-    setTimeout(()=>{ iframe.remove(); aviso.remove(); }, 15000);
+  });(); aviso.remove(); }, 15000);
   }
 }
 
