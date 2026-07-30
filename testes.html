@@ -432,7 +432,7 @@ function imprimirEtiquetaAuto(log){
   _ultimaImpressao = agora;
   const etiqueta = salvarEtiquetaParaImpressao(log);
   const params = new URLSearchParams({
-    autoPrint:'1', 
+    modo:'iframe', // avisa etiquetas.html que está em iframe, não precisa auto-fechar
     codigo: etiqueta.codigo||'', 
     serie: etiqueta.serie||'', 
     ean13: etiqueta.ean13||'', 
@@ -442,23 +442,45 @@ function imprimirEtiquetaAuto(log){
     resultado: etiqueta.resultado||''
   });
   const url = 'etiquetas.html?'+params.toString();
-  console.log('Abrindo etiqueta para impressão automática:', url);
-  const win = window.open(url, '_blank', 'width=900,height=700');
-  if(!win){
-    const iframe = document.createElement('iframe');
-    iframe.style.position='fixed';
-    iframe.style.right='0'; iframe.style.bottom='0';
-    iframe.style.width='400px'; iframe.style.height='300px';
-    iframe.style.border='2px solid #198754';
-    iframe.src=url;
-    document.body.appendChild(iframe);
-    const aviso = document.createElement('div');
-    aviso.style.position='fixed'; aviso.style.right='10px'; aviso.style.bottom='320px';
-    aviso.style.background='#198754'; aviso.style.color='white'; aviso.style.padding='8px 12px'; aviso.style.borderRadius='8px'; aviso.style.zIndex='9999';
-    aviso.innerHTML='🖨️ Imprimindo etiqueta...<br><small>Se bloqueou popup, use o iframe abaixo</small>';
-    document.body.appendChild(aviso);
-    setTimeout(()=>{ iframe.remove(); aviso.remove(); }, 15000);
-  }
+  console.log('Imprimindo etiqueta via iframe oculto (sem deixar aba aberta):', url);
+
+  // Remove iframes antigos se houver
+  document.querySelectorAll('iframe.etiqueta-print-frame').forEach(f=>f.remove());
+
+  const iframe = document.createElement('iframe');
+  iframe.className = 'etiqueta-print-frame';
+  iframe.style.position='fixed';
+  iframe.style.left='-9999px';
+  iframe.style.top='0';
+  iframe.style.width='0';
+  iframe.style.height='0';
+  iframe.style.border='0';
+  iframe.style.visibility='hidden';
+  iframe.src = url;
+  
+  iframe.onload = ()=>{
+    try{
+      setTimeout(()=>{
+        const win = iframe.contentWindow;
+        if(!win) return;
+        // Foca e imprime direto do iframe - NÃO abre nova aba
+        win.focus();
+        win.print();
+        // Remove iframe 2s após imprimir
+        setTimeout(()=>{ 
+          try{ iframe.remove(); }catch{}
+          console.log('Etiqueta impressa e iframe removido');
+        }, 2000);
+      }, 1000); // espera carregar barcode e imagens
+    }catch(e){
+      console.log('Erro ao imprimir iframe', e);
+      // Fallback: abre janela se iframe falhar (com auto-close)
+      const win = window.open(url.replace('modo=iframe','autoPrint=1'), '_blank');
+      if(win) setTimeout(()=>{ try{ win.close(); }catch{} }, 8000);
+    }
+  };
+
+  document.body.appendChild(iframe);
 }
 
 function gerarNomeArquivo(log, ext){return `${log.log_id}_${sanitizeNome(log.produto)}_${sanitizeNome(log.modelo)}_${sanitizeNome(log.serie)}_${sanitizeNome(log.resultado)}.${ext}`;}
