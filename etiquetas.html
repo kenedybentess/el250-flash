@@ -348,22 +348,28 @@ function carregarDaEtiquetaTeste(){
                 banner.style.display='block';
                 bannerTexto.innerText = `${dados.codigo||''} - S/N: ${dados.serie||''}`;
                 if(isAutoPrint){
-                    // Esconde sidebar/menu quando é autoPrint para impressão limpa
-                    document.body.style.background='#fff';
-                    const sidebar = document.querySelector('.sidebar');
-                    if(sidebar) sidebar.style.display='none';
-                    const menu = document.querySelector('.menu-suspenso');
-                    if(menu) menu.style.display='none';
-                    // AUTO IMPRIMIR - CORRIGIDO: apenas 1x
-                    if(window._etiquetaJaImprimiu) return; // evita duplicado
+                    if(window._etiquetaJaImprimiu) return;
                     const esperarImgs = ()=>{
                         const imgs = document.querySelectorAll('#etiqueta img');
                         if(imgs.length===0) return Promise.resolve();
                         return Promise.all(Array.from(imgs).map(img=>{
                             if(img.complete) return Promise.resolve();
-                            return new Promise(res=>{ img.onload=res; img.onerror=res; setTimeout(res,1000); });
+                            return new Promise(res=>{ img.onload=res; img.onerror=res; setTimeout(res,800); });
                         }));
                     };
+
+                    // Fecha janela automaticamente APÓS impressão
+                    const fecharAposImpressao = ()=>{
+                        try{ bannerTexto.innerText = '✅ Impresso! Fechando...'; }catch{}
+                        try{ window.parent.postMessage({tipo:'etiqueta_impressa', serie: dados.serie}, '*'); }catch{}
+                        setTimeout(()=>{ try{ window.close(); }catch{} }, 400);
+                        setTimeout(()=>{ try{ window.open('','_self'); window.close(); }catch{} }, 900);
+                    };
+                    window.addEventListener('afterprint', fecharAposImpressao);
+                    window.matchMedia('print').addEventListener('change', (m)=>{
+                        if(!m.matches) fecharAposImpressao();
+                    });
+
                     const fazerPrint = ()=>{
                         if(window._etiquetaJaImprimiu) return;
                         window._etiquetaJaImprimiu = true;
@@ -371,15 +377,10 @@ function carregarDaEtiquetaTeste(){
                             setTimeout(()=>{
                                 try{ window.focus(); }catch{}
                                 window.print();
-                                try{ window.parent.postMessage({tipo:'etiqueta_impressa', serie: dados.serie}, '*'); }catch{}
-                                // fecha aba automaticamente após imprimir (opcional, 3s depois)
-                                setTimeout(()=>{ 
-                                    try{ window.close(); }catch{}
-                                }, 1500);
-                            }, 600);
+                            }, 500);
                         });
                     };
-                    setTimeout(fazerPrint, 800);
+                    setTimeout(fazerPrint, 600);
                 }
             }
         }
