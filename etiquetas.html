@@ -97,6 +97,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
                 <option value="imagem">🖼️ Imagem (logo)</option>
                 <option value="barcode">📊 Barcode (Código Produto)</option>
                 <option value="ean13">📦 EAN13</option>
+                <option value="barcode_uniao">🔗 Barcode UNIÃO (EAN+SERIE+DATA)</option>
                 <option value="linha">➖ Linha</option>
             </select>
             <div style="margin-top:12px;background:#e7f1ff;border-radius:8px;padding:8px;font-size:11px;color:#0d6efd"><b>Dica:</b> <span id="dicaTipo">Texto livre, descrição, série, etc</span></div>
@@ -123,6 +124,8 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
             <label>2️⃣ Número de Série (do TESTE): <span class="badge-vinculo">AUTO</span></label>
             <select id="selectSerie" onchange="aoSelecionarSerie(this.value)"><option value="">-- Últimos testes --</option></select>
             <input type="text" id="inputSerie" style="margin-top:4px;font-weight:bold;letter-spacing:1px" oninput="dadosEtiqueta.serie=this.value; vincularTodos('serie', this.value)">
+            <label style="display:block;font-size:11px;font-weight:bold;color:#555;margin-top:6px">📅 Data Fabricação DDMMYY / DD/MM/AAAA:</label>
+            <input type="text" id="inputData" placeholder="Ex: 333333 ou 28/07/2026" style="margin-top:2px;font-weight:bold" oninput="dadosEtiqueta.data=this.value; vincularTodos('data', this.value)">
         </div>
         <div class="vinculo-aviso">🔗 Quando configura o código no <b>teste.html</b>, a etiqueta atualiza. S/N do teste vem automático. Ao final do teste, já imprime!</div>
     </div>
@@ -171,7 +174,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 </div>
 
 <script>
-let dadosEtiqueta={codigo:'EL250-01', descricao:'Leitor Elgin EL250', ean13:'7891234567895', serie:'SN12345678'};
+let dadosEtiqueta={codigo:'46FLASH2CK00', descricao:'LEITOR CODIGO BARRAS ELGIN FLASH II', ean13:'7891234567895', serie:'23456789', data:'280726', codigoElgin:'46FLASH2CK00'};
 let elementos=[
     // 1 - Logo
     {id:1, tipo:'imagem', valor:'logo-elgin.png', x:2, y:1, w:28, h:10},
@@ -186,9 +189,10 @@ let elementos=[
     // 6 - NÚMERO DE SÉRIE (REQUISITO)
     {id:6, tipo:'texto', campo:'serie', valor:'S/N: SN12345678', x:5, y:41, w:90, h:9, tamFonte:12, negrito:true},
     // 7 - EAN13 barcode com informações do EAN13 (REQUISITO)
-    {id:7, tipo:'ean13', campo:'ean13', valor:'7891234567895', x:5, y:52, w:90, h:23, tamTexto:10, eanEspaco:2, eanLargura:1.8}
+    {id:7, tipo:'ean13', campo:'ean13', valor:'7891234567895', x:5, y:52, w:90, h:23, tamTexto:10, eanEspaco:2, eanLargura:1.8},
+    {id:8, tipo:'barcode_uniao', campo:'uniao', valor:'858123456789333333', x:5, y:78, w:90, h:22, tamTexto:9, eanLargura:1.5, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO'}
 ];
-let idContador=8;
+let idContador=9;
 
 function garantirLogoElgin(){
     const temLogo = elementos.some(e=> e.tipo==='imagem' && (e.valor.includes('elgin') || e.valor.includes('logo')));
@@ -205,6 +209,8 @@ function vincularTodos(campo, novoValor){
     else if(campo==='ean13') dadosEtiqueta.ean13=novoValor;
     else if(campo==='descricao') dadosEtiqueta.descricao=novoValor;
     else if(campo==='serie') dadosEtiqueta.serie=novoValor;
+    else if(campo==='data') dadosEtiqueta.data=novoValor;
+    else if(campo==='codigoElgin') dadosEtiqueta.codigoElgin=novoValor;
     const mapInput={codigo:'inputCodProduto', ean13:'inputEAN13', descricao:'inputDescricao', serie:'inputSerie'};
     if(mapInput[campo]){
         const inp=document.getElementById(mapInput[campo]);
@@ -237,6 +243,45 @@ function vincularTodos(campo, novoValor){
         localStorage.setItem('etiqueta_auto', JSON.stringify(atual));
     }catch{}
 }
+
+function extrairEAN4Ultimos(ean13){
+    if(!ean13) return '0000';
+    let digits = ean13.replace(/[^0-9]/g,'');
+    if(digits.length>=13){ digits = digits.slice(0,12); }
+    let ultimos4 = digits.slice(-4);
+    return ultimos4.padStart(4,'0');
+}
+function formatarDataDDMMYY(dataRaw){
+    if(!dataRaw) return '000000';
+    let digits = dataRaw.replace(/[^0-9]/g,'');
+    if(digits.length===8){
+        let dd = digits.slice(0,2); let mm = digits.slice(2,4); let yyyy = digits.slice(4,8); let yy = yyyy.slice(2,4);
+        return dd+mm+yy;
+    } else if(digits.length===6){ return digits; }
+    return digits.slice(0,6).padEnd(6,'0');
+}
+function formatarSerie8(serie){
+    if(!serie) return '00000000';
+    let digits = serie.replace(/[^0-9]/g,'');
+    return digits.slice(-8).padStart(8,'0');
+}
+function gerarValorUniao(template){
+    template = template || 'ESPEC_FOTO';
+    let dataRaw = dadosEtiqueta.data || '';
+    let serieRaw = dadosEtiqueta.serie || '';
+    let eanRaw = dadosEtiqueta.ean13 || '';
+    let data6 = formatarDataDDMMYY(dataRaw);
+    let data8 = dataRaw.replace(/[^0-9]/g,'');
+    let serie8 = formatarSerie8(serieRaw);
+    let ean4 = extrairEAN4Ultimos(eanRaw);
+    let ean13clean = eanRaw.replace(/[^0-9]/g,'');
+    let valores = {'ean4':ean4,'ean13':ean13clean,'codigo':dadosEtiqueta.codigo||'','codigoElgin':dadosEtiqueta.codigoElgin||'','serie':serieRaw.replace(/[^0-9]/g,''),'serie8':serie8,'data':data8,'data6':data6,'data8':data8};
+    if(template==='ESPEC_FOTO'){ return ean4 + serie8 + data6; }
+    let result = template;
+    for(let k in valores){ result = result.split('{'+k+'}').join(valores[k]); }
+    return result.replace(/\s+/g,'');
+}
+
 function vincularCampo(id, novoCampo){
     const el=elementos.find(e=>e.id===id);
     if(!el) return;
@@ -426,15 +471,21 @@ function fecharModalAdd(){ document.getElementById('modalAddElemento').classList
 function confirmarAddElemento(){
     const tipo=document.getElementById('selectTipoElemento').value;
     fecharModalAdd();
-    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:90));
-    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:6));
-    let valorPadrao=tipo==='texto'?'Novo Texto':(tipo==='imagem'?'':(tipo==='barcode'?dadosEtiqueta.codigo:(tipo==='ean13'?dadosEtiqueta.ean13:'')));
-    let campoPadrao=tipo==='barcode'?'codigo':(tipo==='ean13'?'ean13':'');
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:9, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:-2, eanEspaco:2, eanLargura:1.5});
+    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:90)));
+    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:6)));
+    let valorPadrao=''; let campoPadrao='';
+    if(tipo==='texto') valorPadrao='Novo Texto';
+    else if(tipo==='barcode') { valorPadrao=dadosEtiqueta.codigo; campoPadrao='codigo'; }
+    else if(tipo==='ean13') { valorPadrao=dadosEtiqueta.ean13; campoPadrao='ean13'; }
+    else if(tipo==='barcode_uniao') { 
+        valorPadrao = gerarValorUniao('ESPEC_FOTO');
+        campoPadrao='uniao';
+    }
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:9, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:-2, eanEspaco:2, eanLargura:1.5, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO'});
     renderizarTudo(); autoSalvar();
 }
 document.getElementById('selectTipoElemento')?.addEventListener('change', function(){
-    const dicas={'texto':'Texto livre, descrição, série, etc','imagem':'Logo Elgin, foto do produto, ícone','barcode':'Código do produto em barras Code39 (vinculado)','ean13':'Código EAN13 em barras (vinculado ao cadastro)','linha':'Linha separadora horizontal ou vertical'};
+    const dicas={'texto':'Texto livre, descrição, série, etc','imagem':'Logo Elgin, foto do produto, ícone','barcode':'Código do produto em barras Code39 (vinculado)','ean13':'Código EAN13 em barras (vinculado ao cadastro)','barcode_uniao':'🔗 UNIÃO EAN 4 últimos (s/ verificador) + SÉRIE 8 + DATA DDMMYY = 18 dígitos - Foto 8581 23456789 333333','linha':'Linha separadora horizontal ou vertical'};
     document.getElementById('dicaTipo').innerText=dicas[this.value]||'';
 });
 function inicializarFormulario(){
@@ -504,6 +555,29 @@ function renderizarEtiqueta(){
         if(el.tipo==='texto'){ const inner=document.createElement('div'); inner.className='preview-text'; inner.innerText=el.valor; inner.style.fontSize=(el.tamFonte||11)+'px'; inner.style.fontWeight=el.negrito?'bold':'normal'; itemDiv.appendChild(inner); }
         else if(el.tipo==='imagem'){ if(el.valor){ const img=document.createElement('img'); img.className='preview-img'; img.src=el.valor; itemDiv.appendChild(img); } else { const ph=document.createElement('div'); ph.style.fontSize='10px'; ph.style.color='#888'; ph.innerText='Sem Imagem'; itemDiv.appendChild(ph); } }
         else if(el.tipo==='barcode'){ if(el.valor){ const bcDiv=document.createElement('div'); bcDiv.className='preview-barcode'; let tv=el.valor.toUpperCase(); if(!tv.startsWith('*')) tv='*'+tv; if(!tv.endsWith('*')) tv=tv+'*'; const dist = el.distanciaTexto!==undefined?el.distanciaTexto:-2; bcDiv.innerHTML=`<div class="barcode-font" style="font-size:${el.tamanhoBarra||36}px;">${tv}</div><div class="barcode-text" style="font-size:${el.tamTexto||9}px; margin-top:${dist}px;">${el.valor.toUpperCase()}</div>`; itemDiv.appendChild(bcDiv); } }
+        else if(el.tipo==='barcode_uniao'){ 
+            let valorUniao = el.valor;
+            if(el.campo==='uniao' || el.templateUniao){
+                valorUniao = gerarValorUniao(el.templateUniao || 'ESPEC_FOTO');
+                el.valor = valorUniao;
+            }
+            if(valorUniao){ 
+                const bcDiv=document.createElement('div'); 
+                bcDiv.className='preview-barcode'; 
+                bcDiv.style.background='white'; bcDiv.style.border='1px solid #0d6efd'; bcDiv.style.display='flex'; bcDiv.style.flexDirection='column';
+                const dist = el.distanciaTexto!==undefined?el.distanciaTexto:-2; 
+                const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+                svg.style.width='100%'; svg.style.height='60%';
+                const textoDiv=document.createElement('div');
+                textoDiv.style.fontSize=(el.tamTexto||9)+'px'; textoDiv.style.marginTop=dist+'px'; textoDiv.style.fontFamily='monospace'; textoDiv.style.fontWeight='bold'; textoDiv.style.textAlign='center';
+                textoDiv.textContent=valorUniao; textoDiv.title='EAN4 últimos s/ verificador + Série 8 + Data DDMMYY';
+                bcDiv.appendChild(svg); bcDiv.appendChild(textoDiv);
+                itemDiv.appendChild(bcDiv);
+                setTimeout(()=>{
+                    try{ JsBarcode(svg, valorUniao, {format: el.formatoBarcode||"CODE128", displayValue:false, margin:0, width: (el.eanLargura||1.5), height: 40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">Erro</text>`; }
+                },0);
+            } 
+        }
         else if(el.tipo==='ean13'){ if(el.valor){ const eanDiv=document.createElement('div'); eanDiv.className='preview-ean13'; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.style.width='100%'; svg.style.height='100%'; eanDiv.appendChild(svg); itemDiv.appendChild(eanDiv); setTimeout(()=>{ try{ JsBarcode(svg, el.valor, {format:"EAN13", displayValue:true, fontSize:el.tamTexto||9, textMargin:el.eanEspaco!==undefined?el.eanEspaco:2, margin:0, width:el.eanLargura||1.5, height:40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">EAN inválido</text>`; } },0); } }
         else if(el.tipo==='linha'){ const linhaDiv=document.createElement('div'); linhaDiv.className='preview-linha'; let esp=mmParaPx(el.espessuraLinha||1); const li=document.createElement('div'); li.className='linha-interna'; if(el.orientacao==='vertical'){ li.style.width=esp+'px'; li.style.height='100%'; } else { li.style.width='100%'; li.style.height=esp+'px'; } linhaDiv.appendChild(li); itemDiv.appendChild(linhaDiv); }
         etiqueta.appendChild(itemDiv);
