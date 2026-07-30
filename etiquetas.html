@@ -27,7 +27,6 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .print-btn{background:#28a745;color:white;border:none;padding:10px;width:100%;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px;margin-top:6px}
 .preview-area{flex:1;display:flex;justify-content:center;align-items:center;background:#e9ecef;padding:20px;overflow:auto;flex-direction:column}
 #etiqueta{background:#fff;border:2px solid #999;position:relative;box-shadow:0 4px 10px rgba(0,0,0,0.2);overflow:hidden}
-.etiqueta-item-preview.sem-borda{border:none !important;background:transparent !important}
 .etiqueta-item-preview{position:absolute;user-select:none;touch-action:none;box-sizing:border-box;border:1px dashed #007bff;background-color:rgba(0,123,255,0.03);cursor:move;display:flex;align-items:center;justify-content:center}
 .preview-img{width:100%;height:100%;object-fit:contain;pointer-events:none}
 .preview-ean13,.preview-barcode{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;overflow:hidden}
@@ -57,15 +56,12 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .modal-btn-cancel{background:#e9ecef;color:#333}
 .badge-vinculo{display:inline-block;background:#198754;color:white;font-size:9px;padding:2px 6px;border-radius:10px;margin-left:4px}
 @media print{
-  .etiqueta-item-preview{border:none !important;background:transparent !important}
-
   .sidebar,.menu-suspenso,.modal-overlay,.no-print{display:none !important}
   body{height:auto !important;overflow:visible !important;background:white !important;display:block !important}
   .preview-area{background:white !important;padding:0 !important;margin:0 !important;display:block !important;overflow:visible !important;height:auto !important}
   #infoAutoPrint{display:none !important}
   #etiqueta{border:none !important;box-shadow:none !important;page-break-after:avoid !important;page-break-inside:avoid !important}
-  .etiqueta-item-preview.sem-borda{border:none !important;background:transparent !important}
-.etiqueta-item-preview{border:none !important;background:transparent !important}
+  .etiqueta-item-preview{border:none !important;background:transparent !important}
   @page{margin:0}
 }
 
@@ -101,8 +97,8 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
                 <option value="imagem">🖼️ Imagem (logo)</option>
                 <option value="barcode">📊 Barcode (Código Produto)</option>
                 <option value="ean13">📦 EAN13</option>
-                <option value="barcode_uniao">🔗 Barcode 18 DÍGITOS (EAN4+SÉRIE+DATA) - SEM BORDA</option>
-                <option value="data">📅 DATA ATUAL</option>
+                <option value="barcode_uniao">🔗 Barcode UNIÃO (EAN+SERIE+DATA) 18 dígitos</option>
+                <option value="data">📅 DATA ATUAL (auto)</option>
                 <option value="linha">➖ Linha</option>
             </select>
             <div style="margin-top:12px;background:#e7f1ff;border-radius:8px;padding:8px;font-size:11px;color:#0d6efd"><b>Dica:</b> <span id="dicaTipo">Texto livre, descrição, série, etc</span></div>
@@ -128,7 +124,10 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
         <div class="form-group">
             <label>2️⃣ Número de Série (do TESTE): <span class="badge-vinculo">AUTO</span></label>
             <select id="selectSerie" onchange="aoSelecionarSerie(this.value)"><option value="">-- Últimos testes --</option></select>
+            <input type="text" id="inputData" placeholder="Data DDMMYY" style="display:none">
             <input type="text" id="inputSerie" style="margin-top:4px;font-weight:bold;letter-spacing:1px" oninput="dadosEtiqueta.serie=this.value; vincularTodos('serie', this.value)">
+            <label style="display:block;font-size:11px;font-weight:bold;color:#555;margin-top:6px">📅 Data Fabricação (DDMMYY):</label>
+            <input type="text" id="inputData" placeholder="Ex: 280726 ou 28/07/2026" style="margin-top:2px;font-weight:bold" oninput="dadosEtiqueta.data=this.value; vincularTodos('data', this.value)">
         </div>
         <div class="vinculo-aviso">🔗 Quando configura o código no <b>teste.html</b>, a etiqueta atualiza. S/N do teste vem automático. Ao final do teste, já imprime!</div>
     </div>
@@ -177,7 +176,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 </div>
 
 <script>
-let dadosEtiqueta={codigo:'46FLASH2CK00', descricao:'LEITOR ELGIN FLASH II', ean13:'7891234567895', serie:'23456789', data:'280726', dataAtual:'', codigoElgin:'46FLASH2CK00'};
+let dadosEtiqueta={codigo:'46FLASH2CK00', descricao:'LEITOR CODIGO BARRAS ELGIN FLASH II', ean13:'7891234567895', serie:'23456789', data:'', dataAtual:'', codigoElgin:'46FLASH2CK00'};
 let elementos=[
     // 1 - Logo
     {id:1, tipo:'imagem', valor:'logo-elgin.png', x:2, y:1, w:28, h:10},
@@ -192,11 +191,9 @@ let elementos=[
     // 6 - NÚMERO DE SÉRIE (REQUISITO)
     {id:6, tipo:'texto', campo:'serie', valor:'S/N: SN12345678', x:5, y:41, w:90, h:9, tamFonte:12, negrito:true},
     // 7 - EAN13 barcode com informações do EAN13 (REQUISITO)
-    {id:7, tipo:'ean13', campo:'ean13', valor:'7891234567895', x:5, y:52, w:90, h:18, tamTexto:10, eanEspaco:2, eanLargura:1.5},
-    {id:8, tipo:'barcode_uniao', campo:'uniao', valor:'858123456789333333', x:5, y:72, w:90, h:16, tamTexto:10, eanLargura:1.8, alturaBarra:30, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', semBorda:true, mostrarTexto:true, distanciaTexto:2, negrito:false, espacamento:0},
-    {id:9, tipo:'data', campo:'dataAtual', valor:'28/07/2026', x:5, y:90, w:35, h:6, tamFonte:10, negrito:false, formatoData:'DD/MM/AAAA'}
+    {id:7, tipo:'ean13', campo:'ean13', valor:'7891234567895', x:5, y:52, w:90, h:23, tamTexto:10, eanEspaco:2, eanLargura:1.8}
 ];
-let idContador=10;
+let idContador=8;
 
 function garantirLogoElgin(){
     const temLogo = elementos.some(e=> e.tipo==='imagem' && (e.valor.includes('elgin') || e.valor.includes('logo')));
@@ -214,6 +211,7 @@ function vincularTodos(campo, novoValor){
     else if(campo==='descricao') dadosEtiqueta.descricao=novoValor;
     else if(campo==='serie') dadosEtiqueta.serie=novoValor;
     else if(campo==='data') dadosEtiqueta.data=novoValor;
+    else if(campo==='dataAtual') dadosEtiqueta.dataAtual=novoValor;
     const mapInput={codigo:'inputCodProduto', ean13:'inputEAN13', descricao:'inputDescricao', serie:'inputSerie'};
     if(mapInput[campo]){
         const inp=document.getElementById(mapInput[campo]);
@@ -254,7 +252,7 @@ function extrairEAN4Ultimos(ean13){
     return digits.slice(-4).padStart(4,'0');
 }
 function formatarDataDDMMYY(dataRaw){
-    if(!dataRaw) return gerarDataAtual('DDMMYY');
+    if(!dataRaw) return '000000';
     let digits = dataRaw.replace(/[^0-9]/g,'');
     if(digits.length===8){ let dd=digits.slice(0,2); let mm=digits.slice(2,4); let yyyy=digits.slice(4,8); return dd+mm+yyyy.slice(2,4); }
     else if(digits.length===6){ return digits; }
@@ -275,7 +273,7 @@ function gerarDataAtual(formato){
     let hh = String(agora.getHours()).padStart(2,'0');
     let min = String(agora.getMinutes()).padStart(2,'0');
     if(formato==='DD/MM/AAAA') return `${dd}/${mm}/${yyyy}`;
-    if(formato==='DD/MM/AA') return `${dd}/${mm}/${yy}`;
+    if(formato==='DD/MM/AA' || formato==='DD/MM/YY') return `${dd}/${mm}/${yy}`;
     if(formato==='DDMMYY') return `${dd}${mm}${yy}`;
     if(formato==='DDMMYYYY') return `${dd}${mm}${yyyy}`;
     if(formato==='AAAA-MM-DD') return `${yyyy}-${mm}-${dd}`;
@@ -289,10 +287,12 @@ function gerarValorUniao(template){
     let serieRaw = dadosEtiqueta.serie || '';
     let eanRaw = dadosEtiqueta.ean13 || '';
     let data6 = formatarDataDDMMYY(dataRaw);
+    let data8 = dataRaw.replace(/[^0-9]/g,'');
     let serie8 = formatarSerie8(serieRaw);
     let ean4 = extrairEAN4Ultimos(eanRaw);
+    let ean13clean = eanRaw.replace(/[^0-9]/g,'');
+    let valores = {'ean4':ean4,'ean13':ean13clean,'codigo':dadosEtiqueta.codigo||'','codigoElgin':dadosEtiqueta.codigoElgin||'','serie':serieRaw.replace(/[^0-9]/g,''),'serie8':serie8,'data':data8,'data6':data6,'data8':data8};
     if(template==='ESPEC_FOTO'){ return ean4 + serie8 + data6; }
-    let valores = {'ean4':ean4,'ean13':eanRaw.replace(/[^0-9]/g,''),'serie8':serie8,'data6':data6};
     let result = template;
     for(let k in valores){ result = result.split('{'+k+'}').join(valores[k]); }
     return result.replace(/\s+/g,'');
@@ -487,20 +487,19 @@ function fecharModalAdd(){ document.getElementById('modalAddElemento').classList
 function confirmarAddElemento(){
     const tipo=document.getElementById('selectTipoElemento').value;
     fecharModalAdd();
-    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?40:(tipo==='linha'?90:90)))));
-    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?18:(tipo==='data'?8:1))));
+    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:90))));
+    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:(tipo==='data'?8:6))));
     let valorPadrao=''; let campoPadrao='';
     if(tipo==='texto') valorPadrao='Novo Texto';
     else if(tipo==='barcode') { valorPadrao=dadosEtiqueta.codigo; campoPadrao='codigo'; }
     else if(tipo==='ean13') { valorPadrao=dadosEtiqueta.ean13; campoPadrao='ean13'; }
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
-    else if(tipo==='linha') { valorPadrao=''; campoPadrao=''; }
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:11, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:0.8, distanciaTexto:2, eanEspaco:2, eanLargura:1.2, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', semBorda: (tipo==='barcode_uniao'?true:false)});
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:9, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:-2, eanEspaco:2, eanLargura:1.5, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA'});
     renderizarTudo(); autoSalvar();
 }
 document.getElementById('selectTipoElemento')?.addEventListener('change', function(){
-    const dicas={'texto':'Texto livre, descrição, série, etc','imagem':'Logo Elgin, foto do produto, ícone','barcode':'Código do produto em barras Code39 (vinculado)','ean13':'Código EAN13 em barras (vinculado ao cadastro)','linha':'Linha separadora horizontal ou vertical'};
+    const dicas={'texto':'Texto livre','imagem':'Logo Elgin','barcode':'Código produto Code39','ean13':'EAN13','barcode_uniao':'🔗 UNIÃO 18 dígitos: EAN4 últimos s/ verif + Série 8 + Data DDMMYY','data':'📅 DATA ATUAL automática (puxa data de hoje)','linha':'Linha separadora'};
     document.getElementById('dicaTipo').innerText=dicas[this.value]||'';
 });
 function inicializarFormulario(){
@@ -537,7 +536,27 @@ function inicializarFormulario(){
                 <div class="form-group"><label>↕️ Espaço código ↔ info: <b>${el.distanciaTexto!==undefined?el.distanciaTexto:-2}px</b></label>
                 <input type="range" min="-10" max="20" value="${el.distanciaTexto!==undefined?el.distanciaTexto:-2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value)); const b=this.parentElement.querySelector('b'); if(b) b.textContent=this.value+'px';" style="width:100%"></div>
             `;
-
+        } else if(el.tipo==='data'){
+            let dataPreview = gerarDataAtual(el.formatoData||'DD/MM/AAAA');
+            htmlCampos=`
+                <div style="background:#d1ecf1;border:2px solid #17a2b8;border-radius:8px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:11px;font-weight:bold;color:#0c5460">📅 DATA ATUAL - PUXA AUTOMÁTICO</div>
+                    <div style="font-family:monospace;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;margin-top:6px;font-size:14px;font-weight:bold;text-align:center">${dataPreview}</div>
+                    <div style="font-size:9px;color:#666;margin-top:4px">Atualiza sozinho com a data de hoje ao imprimir</div>
+                </div>
+                <div class="form-group"><label>📅 Formato da Data:</label>
+                <select onchange="atualizarDado(${el.id}, 'formatoData', this.value); el.valor=gerarDataAtual(this.value); renderizarEtiqueta(); autoSalvar();" style="width:100%;padding:6px;border:1px solid #17a2b8;border-radius:4px;font-size:12px;background:#e7f1ff">
+                    <option value="DD/MM/AAAA" ${el.formatoData==='DD/MM/AAAA'?'selected':''}>DD/MM/AAAA - Ex: 28/07/2026</option>
+                    <option value="DD/MM/AA" ${el.formatoData==='DD/MM/AA'?'selected':''}>DD/MM/AA - Ex: 28/07/26</option>
+                    <option value="DDMMYY" ${el.formatoData==='DDMMYY'?'selected':''}>DDMMYY - Ex: 280726 (para barcode união)</option>
+                    <option value="DDMMYYYY" ${el.formatoData==='DDMMYYYY'?'selected':''}>DDMMYYYY - Ex: 28072026</option>
+                    <option value="AAAA-MM-DD" ${el.formatoData==='AAAA-MM-DD'?'selected':''}>AAAA-MM-DD - Ex: 2026-07-28</option>
+                    <option value="DD-MM-AAAA" ${el.formatoData==='DD-MM-AAAA'?'selected':''}>DD-MM-AAAA - Ex: 28-07-2026</option>
+                    <option value="DD/MM/AAAA HH:MM" ${el.formatoData==='DD/MM/AAAA HH:MM'?'selected':''}>DD/MM/AAAA HH:MM - com hora</option>
+                </select></div>
+                <div class="form-group"><label>Tamanho Fonte:</label><input type="number" value="${el.tamFonte||11}" min="6" max="30" oninput="atualizarDado(${el.id}, 'tamFonte', parseInt(this.value))"></div>
+                <div class="form-group"><label><input type="checkbox" ${el.negrito?'checked':''} onchange="atualizarDado(${el.id}, 'negrito', this.checked)"> Negrito</label></div>
+            `;
         } else if(el.tipo==='barcode_uniao'){
             let valorPreview = gerarValorUniao(el.templateUniao||'ESPEC_FOTO');
             let ean4 = extrairEAN4Ultimos(dadosEtiqueta.ean13);
@@ -545,53 +564,19 @@ function inicializarFormulario(){
             let data6 = formatarDataDDMMYY(dadosEtiqueta.data||gerarDataAtual('DDMMYY'));
             htmlCampos=`
                 <div style="background:#d1e7dd;border:2px solid #198754;border-radius:8px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE 18 DÍGITOS - SEM BORDA</div>
-                    <div style="font-family:monospace;background:white;border-radius:4px;padding:6px;margin-top:6px;font-size:13px;font-weight:bold;word-break:break-all;text-align:center;border:none">${valorPreview}</div>
+                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE 18 DÍGITOS - PADRÃO FOTO</div>
+                    <div style="font-family:monospace;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;margin-top:6px;font-size:13px;font-weight:bold;word-break:break-all;text-align:center">${valorPreview}</div>
                     <div style="font-size:10px;margin-top:6px;background:white;border-radius:4px;padding:4px">
                         <div>1-4: <b style="background:yellow">${ean4}</b> = últimos 4 EAN sem verificador</div>
                         <div>5-12: <b>${serie8}</b> = série 8 dígitos</div>
                         <div>13-18: <b>${data6}</b> = data DDMMYY</div>
                     </div>
                 </div>
-                <div class="form-group"><label><input type="checkbox" ${el.semBorda!==false?'checked':''} onchange="atualizarDado(${el.id}, 'semBorda', this.checked); renderizarEtiqueta();"> Sem borda (recomendado)</label></div>
-                <div class="form-group"><label><input type="checkbox" ${el.mostrarTexto!==false?'checked':''} onchange="atualizarDado(${el.id}, 'mostrarTexto', this.checked); renderizarEtiqueta();"> Mostrar texto abaixo do barcode</label></div>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Largura Barras:</label><input type="range" min="0.5" max="4" step="0.1" value="${el.eanLargura||1.8}" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value)); renderizarEtiqueta();"><small>${el.eanLargura||1.8}</small></div>
-                    <div class="form-group"><label>Altura Barras:</label><input type="range" min="15" max="80" step="1" value="${el.alturaBarra||35}" oninput="atualizarDado(${el.id}, 'alturaBarra', parseInt(this.value)); renderizarEtiqueta();"><small>${el.alturaBarra||35}px</small></div>
-                </div>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Tam. Texto:</label><input type="range" min="6" max="20" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value)); renderizarEtiqueta();"><small>${el.tamTexto||10}px</small></div>
-                    <div class="form-group"><label>Espaço texto-barra:</label><input type="range" min="0" max="20" step="1" value="${el.distanciaTexto||2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value)); renderizarEtiqueta();"><small>${el.distanciaTexto||2}px</small></div>
-                </div>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Negrito:</label><input type="checkbox" ${el.negrito?'checked':''} onchange="atualizarDado(${el.id}, 'negrito', this.checked); renderizarEtiqueta();"></div>
-                    <div class="form-group"><label>Espaçamento letras:</label><input type="range" min="0" max="5" step="0.5" value="${el.espacamento||0}" oninput="atualizarDado(${el.id}, 'espacamento', parseFloat(this.value)); renderizarEtiqueta();"><small>${el.espacamento||0}px</small></div>
-                </div>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Largura (mm):</label><input type="number" step="0.5" value="${el.w}" oninput="atualizarDimensoes(${el.id}, 'w', this.value)"></div>
-                    <div class="form-group"><label>Altura (mm):</label><input type="number" step="0.5" value="${el.h}" oninput="atualizarDimensoes(${el.id}, 'h', this.value)"></div>
-                </div>
-            `;
-        } else if(el.tipo==='data'){
-            let dataPreview = gerarDataAtual(el.formatoData||'DD/MM/AAAA');
-            htmlCampos=`
-                <div style="background:#d1ecf1;border:2px solid #17a2b8;border-radius:8px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:11px;font-weight:bold;color:#0c5460">📅 DATA ATUAL - PUXA AUTOMÁTICO</div>
-                    <div style="font-family:monospace;background:white;border-radius:4px;padding:6px;margin-top:6px;font-size:14px;font-weight:bold;text-align:center;border:none">${dataPreview}</div>
-                </div>
-                <div class="form-group"><label>Formato:</label>
-                <select onchange="atualizarDado(${el.id}, 'formatoData', this.value); el.valor=gerarDataAtual(this.value); renderizarEtiqueta(); autoSalvar();" style="width:100%;padding:6px;border:1px solid #17a2b8;border-radius:4px;font-size:12px;background:#e7f1ff">
-                    <option value="DD/MM/AAAA" ${el.formatoData==='DD/MM/AAAA'?'selected':''}>DD/MM/AAAA - 28/07/2026</option>
-                    <option value="DD/MM/AA" ${el.formatoData==='DD/MM/AA'?'selected':''}>DD/MM/AA - 28/07/26</option>
-                    <option value="DDMMYY" ${el.formatoData==='DDMMYY'?'selected':''}>DDMMYY - 280726</option>
-                    <option value="DDMMYYYY" ${el.formatoData==='DDMMYYYY'?'selected':''}>DDMMYYYY - 28072026</option>
-                    <option value="AAAA-MM-DD" ${el.formatoData==='AAAA-MM-DD'?'selected':''}>AAAA-MM-DD - 2026-07-28</option>
-                    <option value="DD/MM/AAAA HH:MM" ${el.formatoData==='DD/MM/AAAA HH:MM'?'selected':''}>DD/MM/AAAA HH:MM</option>
+                <div class="form-group"><label>📋 Template:</label>
+                <select onchange="atualizarDado(${el.id}, 'templateUniao', this.value); renderizarEtiqueta(); autoSalvar();" style="width:100%;padding:6px;border:1px solid #198754;border-radius:4px;font-size:11px;background:#e7f1ff">
+                    <option value="ESPEC_FOTO" ${el.templateUniao==='ESPEC_FOTO'?'selected':''}>✅ PADRÃO FOTO: EAN4 + SÉRIE8 + DATA6 (18 dígitos)</option>
+                    <option value="{ean4}{serie8}{data6}" ${el.templateUniao==='{ean4}{serie8}{data6}'?'selected':''}>EAN4 + SERIE8 + DATA6</option>
                 </select></div>
-                <div class="row-inputs">
-                    <div class="form-group"><label>Tam. Fonte:</label><input type="range" min="6" max="40" value="${el.tamFonte||11}" oninput="atualizarDado(${el.id}, 'tamFonte', parseInt(this.value)); renderizarEtiqueta();"><small>${el.tamFonte||11}px</small></div>
-                    <div class="form-group"><label>Negrito: <input type="checkbox" ${el.negrito?'checked':''} onchange="atualizarDado(${el.id}, 'negrito', this.checked); renderizarEtiqueta();"></label></div>
-                </div>
             `;
         } else if(el.tipo==='ean13'){
             htmlCampos=`
@@ -624,8 +609,34 @@ function renderizarEtiqueta(){
     elementos.forEach((el)=>{
         const itemDiv=document.createElement('div'); itemDiv.className='etiqueta-item-preview'; itemDiv.setAttribute('data-id',el.id); itemDiv.style.left=mmParaPx(el.x)+'px'; itemDiv.style.top=mmParaPx(el.y)+'px'; itemDiv.style.width=mmParaPx(el.w)+'px'; itemDiv.style.height=mmParaPx(el.h)+'px';
         if(el.tipo==='texto'){ const inner=document.createElement('div'); inner.className='preview-text'; inner.innerText=el.valor; inner.style.fontSize=(el.tamFonte||11)+'px'; inner.style.fontWeight=el.negrito?'bold':'normal'; itemDiv.appendChild(inner); }
+        else if(el.tipo==='data'){ 
+            let valorData = el.valor;
+            if(el.campo==='dataAtual' || el.campo==='data' || !el.valor || el.valor.includes('202')){
+                // Se campo for dataAtual, puxa data atual
+                valorData = gerarDataAtual(el.formatoData || 'DD/MM/AAAA');
+                el.valor = valorData;
+            }
+            const inner=document.createElement('div'); inner.className='preview-text'; inner.innerText=valorData; inner.style.fontSize=(el.tamFonte||11)+'px'; inner.style.fontWeight=el.negrito?'bold':'normal'; inner.style.justifyContent='flex-start'; itemDiv.appendChild(inner);
+        }
         else if(el.tipo==='imagem'){ if(el.valor){ const img=document.createElement('img'); img.className='preview-img'; img.src=el.valor; itemDiv.appendChild(img); } else { const ph=document.createElement('div'); ph.style.fontSize='10px'; ph.style.color='#888'; ph.innerText='Sem Imagem'; itemDiv.appendChild(ph); } }
         else if(el.tipo==='barcode'){ if(el.valor){ const bcDiv=document.createElement('div'); bcDiv.className='preview-barcode'; let tv=el.valor.toUpperCase(); if(!tv.startsWith('*')) tv='*'+tv; if(!tv.endsWith('*')) tv=tv+'*'; const dist = el.distanciaTexto!==undefined?el.distanciaTexto:-2; bcDiv.innerHTML=`<div class="barcode-font" style="font-size:${el.tamanhoBarra||36}px;">${tv}</div><div class="barcode-text" style="font-size:${el.tamTexto||9}px; margin-top:${dist}px;">${el.valor.toUpperCase()}</div>`; itemDiv.appendChild(bcDiv); } }
+        else if(el.tipo==='barcode_uniao'){ 
+            let valorUniao = gerarValorUniao(el.templateUniao || 'ESPEC_FOTO');
+            el.valor = valorUniao;
+            if(valorUniao){ 
+                const bcDiv=document.createElement('div'); 
+                bcDiv.className='preview-barcode'; 
+                bcDiv.style.background='white'; bcDiv.style.border='1px solid #0d6efd'; bcDiv.style.display='flex'; bcDiv.style.flexDirection='column';
+                const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+                svg.style.width='100%'; svg.style.height='60%';
+                const textoDiv=document.createElement('div');
+                textoDiv.style.fontSize=(el.tamTexto||9)+'px'; textoDiv.style.fontFamily='monospace'; textoDiv.style.fontWeight='bold'; textoDiv.style.textAlign='center';
+                textoDiv.textContent=valorUniao;
+                bcDiv.appendChild(svg); bcDiv.appendChild(textoDiv);
+                itemDiv.appendChild(bcDiv);
+                setTimeout(()=>{ try{ JsBarcode(svg, valorUniao, {format: el.formatoBarcode||"CODE128", displayValue:false, margin:0, width: (el.eanLargura||1.5), height: 40});}catch(err){} },0);
+            } 
+        }
         else if(el.tipo==='ean13'){ if(el.valor){ const eanDiv=document.createElement('div'); eanDiv.className='preview-ean13'; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.style.width='100%'; svg.style.height='100%'; eanDiv.appendChild(svg); itemDiv.appendChild(eanDiv); setTimeout(()=>{ try{ JsBarcode(svg, el.valor, {format:"EAN13", displayValue:true, fontSize:el.tamTexto||9, textMargin:el.eanEspaco!==undefined?el.eanEspaco:2, margin:0, width:el.eanLargura||1.5, height:40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">EAN inválido</text>`; } },0); } }
         else if(el.tipo==='linha'){ const linhaDiv=document.createElement('div'); linhaDiv.className='preview-linha'; let esp=mmParaPx(el.espessuraLinha||1); const li=document.createElement('div'); li.className='linha-interna'; if(el.orientacao==='vertical'){ li.style.width=esp+'px'; li.style.height='100%'; } else { li.style.width='100%'; li.style.height=esp+'px'; } linhaDiv.appendChild(li); itemDiv.appendChild(linhaDiv); }
         etiqueta.appendChild(itemDiv);
