@@ -495,7 +495,7 @@ function confirmarAddElemento(){
     else if(tipo==='ean13') { valorPadrao=dadosEtiqueta.ean13; campoPadrao='ean13'; }
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:9, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:-2, eanEspaco:2, eanLargura:1.5, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA'});
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:2, eanLargura:1.6, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:45, mostrarTexto:true, margemBarcode:2, alignTexto:'center', fonteTexto:'monospace'});
     renderizarTudo(); autoSalvar();
 }
 document.getElementById('selectTipoElemento')?.addEventListener('change', function(){
@@ -562,21 +562,102 @@ function inicializarFormulario(){
             let ean4 = extrairEAN4Ultimos(dadosEtiqueta.ean13);
             let serie8 = formatarSerie8(dadosEtiqueta.serie);
             let data6 = formatarDataDDMMYY(dadosEtiqueta.data||gerarDataAtual('DDMMYY'));
+            let data8raw = (dadosEtiqueta.data||'').replace(/[^0-9]/g,'');
+            let ean13clean = (dadosEtiqueta.ean13||'').replace(/[^0-9]/g,'');
             htmlCampos=`
                 <div style="background:#d1e7dd;border:2px solid #198754;border-radius:8px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE 18 DÍGITOS - PADRÃO FOTO</div>
-                    <div style="font-family:monospace;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;margin-top:6px;font-size:13px;font-weight:bold;word-break:break-all;text-align:center">${valorPreview}</div>
-                    <div style="font-size:10px;margin-top:6px;background:white;border-radius:4px;padding:4px">
-                        <div>1-4: <b style="background:yellow">${ean4}</b> = últimos 4 EAN sem verificador</div>
-                        <div>5-12: <b>${serie8}</b> = série 8 dígitos</div>
-                        <div>13-18: <b>${data6}</b> = data DDMMYY</div>
+                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE UNIÃO - 18 DÍGITOS</div>
+                    <div style="font-family:monospace;background:white;border:1px solid #198754;border-radius:6px;padding:8px;margin-top:6px;font-size:14px;font-weight:bold;word-break:break-all;text-align:center;letter-spacing:1px">${valorPreview}</div>
+                    <div style="font-size:10px;margin-top:6px;background:rgba(255,255,255,0.8);border-radius:4px;padding:6px;line-height:1.4">
+                        <div>1-4: <b style="background:#fff3cd;padding:1px 4px;border-radius:3px">${ean4}</b> = EAN 4 últimos (sem dígito verif.) - <span style="color:#666">${ean13clean.slice(0,12)} → <b>${ean4}</b></span></div>
+                        <div>5-12: <b style="background:#d1ecf1;padding:1px 4px;border-radius:3px">${serie8}</b> = Série 8 dígitos - <span style="color:#666">${dadosEtiqueta.serie||'---'} → <b>${serie8}</b></span></div>
+                        <div>13-18: <b style="background:#d4edda;padding:1px 4px;border-radius:3px">${data6}</b> = Data DDMMYY - <span style="color:#666">${dadosEtiqueta.data||'hoje'} → <b>${data6}</b></span></div>
+                    </div>
+                    <div style="display:flex;gap:4px;margin-top:6px">
+                        <button onclick="navigator.clipboard.writeText('${valorPreview}'); alert('Copiado: '+ '${valorPreview}')" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">📋 Copiar valor</button>
+                        <button onclick="atualizarDado(${el.id}, 'templateUniao', 'ESPEC_FOTO'); renderizarTudo(); autoSalvar();" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">🔄 Reset padrão</button>
                     </div>
                 </div>
-                <div class="form-group"><label>📋 Template:</label>
-                <select onchange="atualizarDado(${el.id}, 'templateUniao', this.value); renderizarEtiqueta(); autoSalvar();" style="width:100%;padding:6px;border:1px solid #198754;border-radius:4px;font-size:11px;background:#e7f1ff">
-                    <option value="ESPEC_FOTO" ${el.templateUniao==='ESPEC_FOTO'?'selected':''}>✅ PADRÃO FOTO: EAN4 + SÉRIE8 + DATA6 (18 dígitos)</option>
-                    <option value="{ean4}{serie8}{data6}" ${el.templateUniao==='{ean4}{serie8}{data6}'?'selected':''}>EAN4 + SERIE8 + DATA6</option>
-                </select></div>
+
+                <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:10px;font-weight:bold;color:#495057;margin-bottom:6px">📋 TEMPLATE DE MONTAGEM</div>
+                    <div class="form-group"><label>Template:</label>
+                    <select onchange="atualizarDado(${el.id}, 'templateUniao', this.value); document.getElementById('customTpl_${el.id}').style.display = this.value==='CUSTOM' ? 'block' : 'none'; if(this.value!=='CUSTOM'){ renderizarEtiqueta(); autoSalvar(); }" style="width:100%;padding:6px;border:1px solid #198754;border-radius:4px;font-size:11px;background:#e7f1ff">
+                        <option value="ESPEC_FOTO" ${el.templateUniao==='ESPEC_FOTO'?'selected':''}>✅ PADRÃO FOTO: EAN4 + SÉRIE8 + DATA6 (18)</option>
+                        <option value="{ean4}{serie8}{data6}" ${el.templateUniao==='{ean4}{serie8}{data6}'?'selected':''}>EAN4 + SERIE8 + DATA6</option>
+                        <option value="{ean4}{serie8}" ${el.templateUniao==='{ean4}{serie8}'?'selected':''}>Só EAN4 + SERIE8 (12)</option>
+                        <option value="{serie8}{data6}" ${el.templateUniao==='{serie8}{data6}'?'selected':''}>Só SERIE8 + DATA6 (14)</option>
+                        <option value="{ean13}" ${el.templateUniao==='{ean13}'?'selected':''}>EAN13 completo</option>
+                        <option value="{serie8}" ${el.templateUniao==='{serie8}'?'selected':''}>Só SERIE 8 dígitos</option>
+                        <option value="{codigo}{serie8}" ${el.templateUniao==='{codigo}{serie8}'?'selected':''}>CÓDIGO + SERIE8</option>
+                        <option value="CUSTOM" ${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}','{codigo}{serie8}'].includes(el.templateUniao))?'selected':''}>✏️ Personalizado...</option>
+                    </select></div>
+                    <div id="customTpl_${el.id}" class="form-group" style="display:${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}','{codigo}{serie8}'].includes(el.templateUniao))?'block':'none'}">
+                        <label>Template custom (use {ean4} {ean13} {serie} {serie8} {data} {data6} {data8} {codigo}):</label>
+                        <input type="text" value="${(el.templateUniao==='ESPEC_FOTO'?'':el.templateUniao)||''}" placeholder="{ean4}{serie8}{data6}" oninput="atualizarDado(${el.id}, 'templateUniao', this.value)" style="font-family:monospace;font-size:11px">
+                        <div style="font-size:9px;color:#666;margin-top:2px">Variáveis: {ean4} {ean13} {serie} {serie8} {data} {data6} {codigo} {codigoElgin}</div>
+                    </div>
+                </div>
+
+                <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:10px;font-weight:bold;color:#495057;margin-bottom:6px">🎛️ AJUSTES DO CÓDIGO DE BARRAS</div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Formato:</label>
+                        <select onchange="atualizarDado(${el.id}, 'formatoBarcode', this.value)" style="padding:5px;font-size:11px">
+                            <option value="CODE128" ${(el.formatoBarcode||'CODE128')==='CODE128'?'selected':''}>CODE128 (recomendado)</option>
+                            <option value="CODE128B" ${el.formatoBarcode==='CODE128B'?'selected':''}>CODE128B</option>
+                            <option value="CODE128C" ${el.formatoBarcode==='CODE128C'?'selected':''}>CODE128C (só números pares)</option>
+                            <option value="CODE39" ${el.formatoBarcode==='CODE39'?'selected':''}>CODE39</option>
+                            <option value="EAN13" ${el.formatoBarcode==='EAN13'?'selected':''}>EAN13 (13 dígitos)</option>
+                            <option value="ITF" ${el.formatoBarcode==='ITF'?'selected':''}>ITF / Interleaved 2 of 5</option>
+                            <option value="codabar" ${el.formatoBarcode==='codabar'?'selected':''}>Codabar</option>
+                        </select></div>
+                        <div class="form-group"><label>Mostrar texto:</label>
+                        <select onchange="atualizarDado(${el.id}, 'mostrarTexto', this.value==='true')" style="padding:5px;font-size:11px">
+                            <option value="true" ${el.mostrarTexto!==false?'selected':''}>Sim</option>
+                            <option value="false" ${el.mostrarTexto===false?'selected':''}>Não</option>
+                        </select></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Larg. barras: <b>${el.eanLargura||1.6}</b></label>
+                        <input type="range" min="0.5" max="4" step="0.1" value="${el.eanLargura||1.6}" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value" style="width:100%"></div>
+                        <div class="form-group"><label>Altura barras: <b>${el.alturaBarra||45}px</b></label>
+                        <input type="range" min="15" max="120" step="2" value="${el.alturaBarra||45}" oninput="atualizarDado(${el.id}, 'alturaBarra', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Tam. texto: <b>${el.tamTexto||10}px</b></label>
+                        <input type="range" min="6" max="20" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Dist. texto: <b>${el.distanciaTexto||2}px</b></label>
+                        <input type="range" min="-5" max="20" step="1" value="${el.distanciaTexto!==undefined?el.distanciaTexto:2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Margem lateral:</label>
+                        <input type="number" value="${el.margemBarcode||0}" min="0" max="20" step="1" oninput="atualizarDado(${el.id}, 'margemBarcode', parseInt(this.value))"></div>
+                        <div class="form-group"><label>Alinhamento texto:</label>
+                        <select onchange="atualizarDado(${el.id}, 'alignTexto', this.value)" style="padding:5px;font-size:11px">
+                            <option value="center" ${(el.alignTexto||'center')==='center'?'selected':''}>Centro</option>
+                            <option value="left" ${el.alignTexto==='left'?'selected':''}>Esquerda</option>
+                            <option value="right" ${el.alignTexto==='right'?'selected':''}>Direita</option>
+                        </select></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Negrito texto:</label>
+                        <select onchange="atualizarDado(${el.id}, 'negrito', this.value==='true')" style="padding:5px;font-size:11px">
+                            <option value="false" ${!el.negrito?'selected':''}>Normal</option>
+                            <option value="true" ${el.negrito?'selected':''}>Negrito</option>
+                        </select></div>
+                        <div class="form-group"><label>Fonte:</label>
+                        <select onchange="atualizarDado(${el.id}, 'fonteTexto', this.value)" style="padding:5px;font-size:11px">
+                            <option value="monospace" ${(el.fonteTexto||'monospace')==='monospace'?'selected':''}>Monospace</option>
+                            <option value="Arial" ${el.fonteTexto==='Arial'?'selected':''}>Arial</option>
+                            <option value="Courier" ${el.fonteTexto==='Courier'?'selected':''}>Courier</option>
+                        </select></div>
+                    </div>
+                </div>
+
+                <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px;margin-bottom:6px">
+                    <div style="font-size:9px;font-weight:bold;color:#856404">🔧 DICA: Se as barras estiverem muito juntas, diminua "Larg. barras". Se muito finas, aumente. Altura ideal 40-60px para etiquetas pequenas.</div>
+                </div>
             `;
         } else if(el.tipo==='ean13'){
             htmlCampos=`
@@ -626,15 +707,53 @@ function renderizarEtiqueta(){
             if(valorUniao){ 
                 const bcDiv=document.createElement('div'); 
                 bcDiv.className='preview-barcode'; 
-                bcDiv.style.background='white'; bcDiv.style.border='1px solid #0d6efd'; bcDiv.style.display='flex'; bcDiv.style.flexDirection='column';
+                bcDiv.style.background='white'; 
+                bcDiv.style.display='flex'; 
+                bcDiv.style.flexDirection='column';
+                bcDiv.style.justifyContent='center';
+                bcDiv.style.alignItems='stretch';
+                bcDiv.style.padding=(el.margemBarcode||0)+'px';
                 const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-                svg.style.width='100%'; svg.style.height='60%';
-                const textoDiv=document.createElement('div');
-                textoDiv.style.fontSize=(el.tamTexto||9)+'px'; textoDiv.style.fontFamily='monospace'; textoDiv.style.fontWeight='bold'; textoDiv.style.textAlign='center';
-                textoDiv.textContent=valorUniao;
-                bcDiv.appendChild(svg); bcDiv.appendChild(textoDiv);
+                svg.style.width='100%'; 
+                svg.style.flex='1';
+                svg.style.minHeight='10px';
+                const mostrarTexto = el.mostrarTexto!==false;
+                if(mostrarTexto){
+                    const textoDiv=document.createElement('div');
+                    textoDiv.style.fontSize=(el.tamTexto||10)+'px'; 
+                    textoDiv.style.fontFamily=el.fonteTexto||'monospace'; 
+                    textoDiv.style.fontWeight=el.negrito?'bold':'bold'; 
+                    textoDiv.style.textAlign=el.alignTexto||'center';
+                    textoDiv.style.marginTop=(el.distanciaTexto!==undefined?el.distanciaTexto:2)+'px';
+                    textoDiv.style.lineHeight='1';
+                    textoDiv.style.whiteSpace='nowrap';
+                    textoDiv.style.overflow='hidden';
+                    textoDiv.textContent=valorUniao;
+                    bcDiv.appendChild(svg); bcDiv.appendChild(textoDiv);
+                } else {
+                    bcDiv.appendChild(svg);
+                    svg.style.height='100%';
+                }
                 itemDiv.appendChild(bcDiv);
-                setTimeout(()=>{ try{ JsBarcode(svg, valorUniao, {format: el.formatoBarcode||"CODE128", displayValue:false, margin:0, width: (el.eanLargura||1.5), height: 40});}catch(err){} },0);
+                setTimeout(()=>{ 
+                    try{ 
+                        let fmt = el.formatoBarcode||"CODE128";
+                        // Corrige formatos incompatíveis
+                        if(fmt==='EAN13' && valorUniao.length!==13){ fmt='CODE128'; }
+                        if(fmt==='CODE128C' && valorUniao.length%2!==0){ fmt='CODE128'; }
+                        JsBarcode(svg, valorUniao, {
+                            format: fmt, 
+                            displayValue:false, 
+                            margin: el.margemBarcode||0, 
+                            width: (el.eanLargura||1.6), 
+                            height: (el.alturaBarra||45),
+                            background:"transparent"
+                        });
+                    }catch(err){ 
+                        console.log('JsBarcode erro uniao', err);
+                        svg.innerHTML=`<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="red">${err.message||'Erro barcode'}</text>`;
+                    } 
+                },0);
             } 
         }
         else if(el.tipo==='ean13'){ if(el.valor){ const eanDiv=document.createElement('div'); eanDiv.className='preview-ean13'; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.style.width='100%'; svg.style.height='100%'; eanDiv.appendChild(svg); itemDiv.appendChild(eanDiv); setTimeout(()=>{ try{ JsBarcode(svg, el.valor, {format:"EAN13", displayValue:true, fontSize:el.tamTexto||9, textMargin:el.eanEspaco!==undefined?el.eanEspaco:2, margin:0, width:el.eanLargura||1.5, height:40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">EAN inválido</text>`; } },0); } }
