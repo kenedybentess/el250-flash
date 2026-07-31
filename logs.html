@@ -1,23 +1,254 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Logs de Evidência</title>
+<title>Logs de Evidência - Código Produto e Série</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<style>body{background:#f4f6f9;padding:20px} .header{background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;padding:25px;border-radius:15px;margin-bottom:20px}</style>
+<style>
+body{background:#f4f6f9;padding:20px}
+.header{background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;padding:25px;border-radius:15px;margin-bottom:20px}
+.codigo-destaque{background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;padding:8px 12px;border-radius:8px;font-weight:900;font-size:14px;letter-spacing:0.5px}
+.serie-destaque{background:linear-gradient(135deg,#212529,#495057);color:white;padding:8px 12px;border-radius:8px;font-weight:900;font-size:14px;letter-spacing:1px;font-family:monospace}
+.log-card{border-left:5px solid #0d6efd}
+.log-card.aprovado{border-left-color:#198754}
+.log-card.reprovado{border-left-color:#dc3545}
+.detalhe-header{background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:12px;padding:16px;margin-bottom:12px}
+.prod-serie-box{display:flex;gap:12px;flex-wrap:wrap}
+.prod-serie-box > div{flex:1;min-width:200px}
+</style>
 </head>
 <body>
 <div class="container-fluid">
-<div class="header d-flex justify-content-between"><div><h2><i class="bi bi-file-text"></i> Logs de Evidência - Testes</h2><p class="mb-0">Histórico completo com hash de autenticidade</p></div><div><a href="testes.html" class="btn btn-light me-2">Novo Teste</a><a href="index.html" class="btn btn-outline-light">Dashboard</a></div></div>
-<div class="card"><div class="card-header d-flex justify-content-between"><span>Total: <b id="total"></b> logs</span><div><button class="btn btn-sm btn-success" onclick="exportCSV()"><i class="bi bi-filetype-csv"></i> Exportar CSV</button><button class="btn btn-sm btn-danger ms-2" onclick="limpar()"><i class="bi bi-trash"></i> Limpar</button></div></div>
-<div class="card-body"><div class="table-responsive"><table class="table table-hover"><thead><tr><th>LOG ID</th><th>Data Fim</th><th>Série</th><th>Operador</th><th>Produto</th><th>Duração</th><th>Resultado</th><th>Hash</th><th>Ação</th></tr></thead><tbody id="tbody"></tbody></table></div></div></div>
-<div id="detalhe" class="card mt-4" style="display:none;"><div class="card-header">Detalhe do Log</div><div class="card-body"><pre id="preDetalhe" style="font-size:12px;"></pre></div></div>
+<div class="header d-flex justify-content-between align-items-center">
+<div>
+<h2><i class="bi bi-file-text"></i> Logs de Evidência - Testes</h2>
+<p class="mb-0">Histórico com <b>Código do Produto</b> e <b>Número de Série</b> em destaque</p>
 </div>
+<div><a href="testes.html" class="btn btn-light me-2"><i class="bi bi-plus-circle"></i> Novo Teste</a><a href="index.html" class="btn btn-outline-light">Dashboard</a></div>
+</div>
+
+<div class="card mb-3">
+<div class="card-body py-2">
+<div class="row g-2 align-items-center">
+<div class="col-md-4"><input id="filtroBusca" class="form-control" placeholder="🔍 Buscar por Código Produto, Série, Operador..." oninput="carregar()"></div>
+<div class="col-md-3">
+<select id="filtroResultado" class="form-select" onchange="carregar()">
+<option value="">Todos resultados</option>
+<option value="APROVADO">✅ Só APROVADO</option>
+<option value="REPROVADO">❌ Só REPROVADO</option>
+</select>
+</div>
+<div class="col-md-5 text-end">
+<span class="me-3">Total: <b id="total">0</b> logs</span>
+<button class="btn btn-sm btn-success" onclick="exportCSV()"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
+<button class="btn btn-sm btn-primary ms-2" onclick="exportTXT()"><i class="bi bi-file-text"></i> Exportar TXT</button>
+<button class="btn btn-sm btn-danger ms-2" onclick="limpar()"><i class="bi bi-trash"></i> Limpar</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0">
+<thead class="table-dark">
+<tr>
+<th><i class="bi bi-upc"></i> LOG ID</th>
+<th><i class="bi bi-box-seam"></i> CÓDIGO PRODUTO</th>
+<th><i class="bi bi-123"></i> Nº SÉRIE</th>
+<th>Data Fim</th>
+<th>Operador</th>
+<th>Duração</th>
+<th>Resultado</th>
+<th>Hash</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div id="detalhe" class="card mt-4" style="display:none;">
+<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+<b><i class="bi bi-file-earmark-text"></i> DETALHE DO LOG - Código e Série em Destaque</b>
+<button class="btn btn-sm btn-light" onclick="document.getElementById('detalhe').style.display='none'">Fechar</button>
+</div>
+<div class="card-body">
+<div class="detalhe-header">
+<div class="prod-serie-box">
+<div>
+<div class="small text-muted fw-bold"><i class="bi bi-box-seam"></i> CÓDIGO DO PRODUTO</div>
+<div class="codigo-destaque mt-1" id="detCodigo">-</div>
+<div class="small mt-1"><span class="text-muted">Modelo:</span> <b id="detModelo">-</b> | <span class="text-muted">Descrição:</span> <span id="detDescricao">-</span></div>
+</div>
+<div>
+<div class="small text-muted fw-bold"><i class="bi bi-123"></i> NÚMERO DE SÉRIE</div>
+<div class="serie-destaque mt-1" id="detSerie">-</div>
+<div class="small mt-1"><span class="text-muted">LOG ID:</span> <code id="detLogId">-</code></div>
+</div>
+</div>
+<div class="row g-2 mt-3">
+<div class="col-md-3"><div class="small text-muted">Operador</div><div class="fw-bold" id="detOperador">-</div></div>
+<div class="col-md-3"><div class="small text-muted">Resultado</div><div id="detResultado">-</div></div>
+<div class="col-md-3"><div class="small text-muted">Data Fim</div><div id="detData">-</div></div>
+<div class="col-md-3"><div class="small text-muted">Duração</div><div id="detDuracao">-</div></div>
+</div>
+</div>
+
+<div class="row mt-3">
+<div class="col-md-6">
+<h6><i class="bi bi-upc-scan"></i> Leituras Realizadas</h6>
+<div class="table-responsive">
+<table class="table table-sm table-bordered">
+<thead class="table-light"><tr><th>#</th><th>Nome</th><th>Esperado</th><th>Lido</th><th>Status</th></tr></thead>
+<tbody id="detLeituras"></tbody>
+</table>
+</div>
+</div>
+<div class="col-md-6">
+<h6><i class="bi bi-file-text"></i> Log Bruto TXT</h6>
+<pre id="preDetalhe" style="font-size:11px;background:#111;color:#0f0;padding:12px;border-radius:8px;max-height:300px;overflow:auto;white-space:pre-wrap"></pre>
+</div>
+</div>
+
+<div class="mt-3 p-2 bg-light rounded">
+<div class="small text-muted">Hash de Autenticidade</div>
+<code id="detHash" style="word-break:break-all;font-size:11px"></code>
+</div>
+</div>
+</div>
+</div>
+
 <script>
-function carregar(){let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');document.getElementById('total').innerText=logs.length;let tbody=document.getElementById('tbody');tbody.innerHTML=logs.length===0?'<tr><td colspan=9 class="text-center">Nenhum log ainda</td></tr>':logs.map(l=>`<tr><td><small>${l.log_id}</small></td><td>${l.fim_br}</td><td><b>${l.serie}</b></td><td>${l.operador}</td><td>${l.produto}</td><td>${l.duracao_segundos}s</td><td><span class="badge ${l.resultado==='APROVADO'?'bg-success':'bg-danger'}">${l.resultado}</span></td><td><small style="font-family:monospace;">${l.hash.slice(0,8)}...</small></td><td><button class="btn btn-sm btn-primary" onclick="ver('${l.log_id}')"><i class="bi bi-eye"></i></button></td></tr>`).join('');}
-function ver(id){let logs=JSON.parse(localStorage.getItem('logs_evidencia'));let l=logs.find(x=>x.log_id===id);document.getElementById('detalhe').style.display='block';document.getElementById('preDetalhe').innerText=JSON.stringify(l,null,2);window.scrollTo(0,document.body.scrollHeight);}
-function exportCSV(){let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');let csv='LOG_ID;DATA_INICIO;DATA_FIM;SERIE;OPERADOR;PRODUTO;RESULTADO;DURACAO;HASH\n'+logs.map(l=>`${l.log_id};${l.inicio_br};${l.fim_br};${l.serie};${l.operador};${l.produto};${l.resultado};${l.duracao_segundos};${l.hash}`).join('\n');let blob=new Blob([csv],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='logs_evidencia_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
-function limpar(){if(confirm('Apagar todos os logs de evidência?')){localStorage.setItem('logs_evidencia',JSON.stringify([]));carregar();}}
+function carregar(){
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');
+  const busca = (document.getElementById('filtroBusca').value||'').toLowerCase();
+  const filtroRes = document.getElementById('filtroResultado').value;
+  
+  let filtrados = logs.filter(l=>{
+    if(filtroRes && l.resultado!==filtroRes) return false;
+    if(busca){
+      const texto = `${l.log_id} ${l.produto} ${l.serie} ${l.operador} ${l.modelo}`.toLowerCase();
+      if(!texto.includes(busca)) return false;
+    }
+    return true;
+  });
+  
+  document.getElementById('total').innerText=filtrados.length + (filtrados.length!==logs.length ? ` de ${logs.length}` : '');
+  let tbody=document.getElementById('tbody');
+  tbody.innerHTML=filtrados.length===0?'<tr><td colspan=9 class="text-center py-4 text-muted">Nenhum log encontrado<br><small>Tente limpar filtros</small></td></tr>':filtrados.map(l=>`
+    <tr class="${l.resultado==='APROVADO'?'table-success':'table-danger'}" style="border-left:5px solid ${l.resultado==='APROVADO'?'#198754':'#dc3545'}">
+      <td><small class="font-monospace">${l.log_id}</small><br><small class="text-muted">${l.fim_br||''}</small></td>
+      <td><span class="codigo-destaque" style="font-size:12px;padding:4px 8px">${l.produto||'-'}</span><br><small class="text-muted">${l.modelo||''}</small></td>
+      <td><span class="serie-destaque" style="font-size:13px;padding:4px 8px">${l.serie||'-'}</span></td>
+      <td><small>${l.fim_br||''}</small></td>
+      <td>${l.operador||'-'}</td>
+      <td>${l.duracao_segundos||'0'}s</td>
+      <td><span class="badge ${l.resultado==='APROVADO'?'bg-success':'bg-danger'} fs-6">${l.resultado==='APROVADO'?'✅':'❌'} ${l.resultado}</span></td>
+      <td><small class="font-monospace">${(l.hash||'').slice(0,8)}...</small></td>
+      <td><button class="btn btn-sm btn-primary" onclick="ver('${l.log_id}')" title="Ver detalhe com código e série"><i class="bi bi-eye"></i> Ver</button></td>
+    </tr>
+  `).join('');
+}
+
+function ver(id){
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');
+  let l=logs.find(x=>x.log_id===id);
+  if(!l) return;
+  document.getElementById('detalhe').style.display='block';
+  
+  // Destaque código e série
+  document.getElementById('detCodigo').innerText = l.produto||'-';
+  document.getElementById('detSerie').innerText = l.serie||'-';
+  document.getElementById('detModelo').innerText = l.modelo||'-';
+  document.getElementById('detDescricao').innerText = l.produto||'';
+  document.getElementById('detLogId').innerText = l.log_id||'';
+  document.getElementById('detOperador').innerText = l.operador||'-';
+  document.getElementById('detResultado').innerHTML = `<span class="badge ${l.resultado==='APROVADO'?'bg-success':'bg-danger'} fs-6">${l.resultado}</span>`;
+  document.getElementById('detData').innerText = l.fim_br||'';
+  document.getElementById('detDuracao').innerText = (l.duracao_segundos||'0')+'s';
+  document.getElementById('detHash').innerText = l.hash||'';
+  
+  // Leituras
+  let tbody = document.getElementById('detLeituras');
+  if(l.leituras){
+    tbody.innerHTML = Object.values(l.leituras).map((it,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td><small>${it.nome||''}</small></td>
+        <td><code style="font-size:10px">${it.esperado||''}</code></td>
+        <td><b>${it.codigo||''}</b></td>
+        <td>${it.correto?'✅ OK':'❌ ERRO'}</td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan=5 class="text-center text-muted">Sem leituras</td></tr>';
+  }
+  
+  // Log bruto com código e série em destaque no topo
+  let textoLog = `========================================
+CÓDIGO DO PRODUTO: ${l.produto||'-'}
+NÚMERO DE SÉRIE: ${l.serie||'-'}
+MODELO: ${l.modelo||'-'}
+========================================
+LOG ID: ${l.log_id||''}
+INÍCIO: ${l.inicio_br||''}
+FIM: ${l.fim_br||''}
+OPERADOR: ${l.operador||''}
+RESULTADO: ${l.resultado||''}
+DURAÇÃO: ${l.duracao_segundos||''}s
+HASH: ${l.hash||''}
+========================================
+LEITURAS:
+${l.leituras ? Object.values(l.leituras).map(it=>`[${it.correto?'OK':'ERRO'}] ${it.nome} | ESP: ${it.esperado} | LIDO: ${it.codigo} | ${it.hora||''}`).join('\n') : 'Sem leituras'}
+`;
+  
+  document.getElementById('preDetalhe').innerText = textoLog;
+  window.scrollTo(0,document.body.scrollHeight);
+}
+
+function exportCSV(){
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');
+  let csv='LOG_ID;CODIGO_PRODUTO;NUMERO_SERIE;MODELO;DATA_INICIO;DATA_FIM;OPERADOR;RESULTADO;DURACAO;HASH;EAN13
+'+logs.map(l=>{
+    // tenta pegar EAN13 do cadastro de produtos
+    let ean = '';
+    try{
+      const produtos = JSON.parse(localStorage.getItem('produtos')||'[]');
+      const p = produtos.find(x=>x.codigo===l.produto);
+      if(p) ean = p.ean13||'';
+    }catch{}
+    return `${l.log_id};${l.produto||''};${l.serie||''};${l.modelo||''};${l.inicio_br||''};${l.fim_br||''};${l.operador||''};${l.resultado||''};${l.duracao_segundos||''};${l.hash||''};${ean}`;
+  }).join('\n');
+  let blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='logs_evidencia_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+function exportTXT(){
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');
+  let txt = logs.map(l=>`========================================
+CÓDIGO DO PRODUTO: ${l.produto||'-'}
+NÚMERO DE SÉRIE: ${l.serie||'-'}
+LOG ID: ${l.log_id}
+RESULTADO: ${l.resultado}
+DATA: ${l.fim_br}
+OPERADOR: ${l.operador}
+========================================`).join('\n\n');
+  let blob=new Blob([txt],{type:'text/plain'});
+  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='logs_resumo_'+new Date().toISOString().slice(0,10)+'.txt';a.click();
+}
+
+function limpar(){
+  if(confirm('Apagar todos os logs de evidência? Esta ação não pode ser desfeita.')){
+    localStorage.setItem('logs_evidencia',JSON.stringify([]));
+    carregar();
+    document.getElementById('detalhe').style.display='none';
+  }
+}
+
 document.addEventListener('DOMContentLoaded',carregar);
 </script>
 </body>
