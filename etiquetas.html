@@ -34,6 +34,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .preview-text{width:100%;height:100%;display:flex;align-items:center;overflow:hidden;pointer-events:none;padding:0 2px}
 .preview-linha{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .linha-interna{background-color:#000 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.preview-quadrado{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .menu-suspenso{position:fixed;top:12px;right:12px;z-index:9999}
 .menu-btn{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 12px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;transition:0.2s}
 .menu-dropdown{position:absolute;top:54px;right:0;width:220px;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);overflow:hidden;display:none;border:1px solid #dee2e6}
@@ -100,6 +101,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
                 <option value="barcode_uniao">🔗 Barcode UNIÃO (EAN+SERIE+DATA) 18 dígitos</option>
                 <option value="data">📅 DATA ATUAL (auto)</option>
                 <option value="linha">➖ Linha</option>
+                <option value="quadrado">⬜ Quadrado / Retângulo / Borda</option>
             </select>
             <div style="margin-top:12px;background:#e7f1ff;border-radius:8px;padding:8px;font-size:11px;color:#0d6efd"><b>Dica:</b> <span id="dicaTipo">Texto livre, descrição, série, etc</span></div>
         </div>
@@ -487,19 +489,19 @@ function fecharModalAdd(){ document.getElementById('modalAddElemento').classList
 function confirmarAddElemento(){
     const tipo=document.getElementById('selectTipoElemento').value;
     fecharModalAdd();
-    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:90))));
-    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:(tipo==='data'?8:6))));
+    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:(tipo==='quadrado'?40:90)))));
+    let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:(tipo==='data'?8:(tipo==='quadrado'?25:6)))));
     let valorPadrao=''; let campoPadrao='';
     if(tipo==='texto') valorPadrao='Novo Texto';
     else if(tipo==='barcode') { valorPadrao=dadosEtiqueta.codigo; campoPadrao='codigo'; }
     else if(tipo==='ean13') { valorPadrao=dadosEtiqueta.ean13; campoPadrao='ean13'; }
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:2, eanLargura:1.6, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:45, mostrarTexto:true, margemBarcode:2, alignTexto:'center', fonteTexto:'monospace'});
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:2, eanLargura:1.6, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:45, mostrarTexto:true, margemBarcode:2, alignTexto:'center', fonteTexto:'monospace', bordaEspessura:1.5, bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff'});
     renderizarTudo(); autoSalvar();
 }
 document.getElementById('selectTipoElemento')?.addEventListener('change', function(){
-    const dicas={'texto':'Texto livre','imagem':'Logo Elgin','barcode':'Código produto Code39','ean13':'EAN13','barcode_uniao':'🔗 UNIÃO 18 dígitos: EAN4 últimos s/ verif + Série 8 + Data DDMMYY','data':'📅 DATA ATUAL automática (puxa data de hoje)','linha':'Linha separadora'};
+    const dicas={'texto':'Texto livre','imagem':'Logo Elgin','barcode':'Código produto Code39','ean13':'EAN13','barcode_uniao':'🔗 UNIÃO 18 dígitos: EAN4 últimos s/ verif + Série 8 + Data DDMMYY','data':'📅 DATA ATUAL automática (puxa data de hoje)','linha':'Linha separadora','quadrado':'⬜ Quadrado/Retângulo com borda ajustável, raio, preenchimento e estilo'};
     document.getElementById('dicaTipo').innerText=dicas[this.value]||'';
 });
 function inicializarFormulario(){
@@ -674,7 +676,67 @@ function inicializarFormulario(){
                 <input type="range" min="0" max="15" value="${el.eanEspaco!==undefined?el.eanEspaco:2}" oninput="atualizarDado(${el.id}, 'eanEspaco', parseInt(this.value)); const b=this.parentElement.querySelector('b'); if(b) b.textContent=this.value+'px';" style="width:100%"></div>
             `;
         } else if(el.tipo==='linha'){
-            htmlCampos=`<div class="row-inputs"><div class="form-group"><label>Orientação:</label><select onchange="atualizarDado(${el.id}, 'orientacao', this.value); autoSalvar()"><option value="horizontal" ${el.orientacao==='horizontal'?'selected':''}>Horizontal</option><option value="vertical" ${el.orientacao==='vertical'?'selected':''}>Vertical</option></select></div><div class="form-group"><label>Espessura:</label><input type="number" step="0.5" value="${el.espessuraLinha||1}" oninput="atualizarDado(${el.id}, 'espessuraLinha', parseFloat(this.value)); autoSalvar()"></div></div>`;
+            htmlCampos=`<div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:6px">
+                <div style="font-size:10px;font-weight:bold;margin-bottom:6px">➖ AJUSTE MANUAL DA LINHA</div>
+                <div class="row-inputs"><div class="form-group"><label>Orientação:</label><select onchange="atualizarDado(${el.id}, 'orientacao', this.value)"><option value="horizontal" ${el.orientacao==='horizontal'?'selected':''}>Horizontal</option><option value="vertical" ${el.orientacao==='vertical'?'selected':''}>Vertical</option><option value="diagonal" ${el.orientacao==='diagonal'?'selected':''}>Diagonal</option></select></div><div class="form-group"><label>Espessura: <b>${el.espessuraLinha||1}px</b></label><input type="range" min="0.5" max="10" step="0.5" value="${el.espessuraLinha||1}" oninput="atualizarDado(${el.id}, 'espessuraLinha', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'"></div></div>
+                <div class="row-inputs"><div class="form-group"><label>Cor:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:32px;padding:2px"></div><div class="form-group"><label>Estilo:</label><select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)"><option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>Sólida</option><option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>Tracejada</option><option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>Pontilhada</option><option value="double" ${el.bordaEstilo==='double'?'selected':''}>Dupla</option></select></div></div>
+            </div>`;
+        } else if(el.tipo==='quadrado'){
+            htmlCampos=`
+                <div style="background:#e7f1ff;border:2px solid #0d6efd;border-radius:8px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:11px;font-weight:bold;color:#0d6efd">⬜ QUADRADO / RETÂNGULO - AJUSTE MANUAL</div>
+                    <div style="display:flex;gap:6px;margin-top:6px">
+                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
+                            <div style="font-size:9px;color:#666">Largura</div><div style="font-weight:bold">${el.w.toFixed(1)}mm</div>
+                        </div>
+                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
+                            <div style="font-size:9px;color:#666">Altura</div><div style="font-weight:bold">${el.h.toFixed(1)}mm</div>
+                        </div>
+                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
+                            <div style="font-size:9px;color:#666">Proporção</div><div style="font-weight:bold">${(el.w/el.h).toFixed(2)}:1 ${Math.abs(el.w-el.h)<0.5?'(⬜ quadrado)':'(▭ retângulo)'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🎨 BORDA</div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Espessura: <b>${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}px</b></label>
+                        <input type="range" min="0" max="10" step="0.5" value="${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}" oninput="atualizarDado(${el.id}, 'bordaEspessura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Cor da borda:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:30px;padding:2px"></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Estilo:</label>
+                        <select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)" style="padding:5px;font-size:11px">
+                            <option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>━━ Sólida</option>
+                            <option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>╌ Tracejada</option>
+                            <option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>⋯ Pontilhada</option>
+                            <option value="double" ${el.bordaEstilo==='double'?'selected':''}>═ Dupla</option>
+                            <option value="none" ${el.bordaEstilo==='none'?'selected':''}>Sem borda</option>
+                        </select></div>
+                        <div class="form-group"><label>Raio / Cantos: <b>${el.bordaRaio!==undefined?el.bordaRaio:2}px</b></label>
+                        <input type="range" min="0" max="50" step="1" value="${el.bordaRaio!==undefined?el.bordaRaio:2}" oninput="atualizarDado(${el.id}, 'bordaRaio', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                    </div>
+                </div>
+
+                <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🖌️ PREENCHIMENTO</div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Fundo:</label>
+                        <select onchange="atualizarDado(${el.id}, 'preenchimento', this.value); document.getElementById('corFundo_${el.id}').style.display=this.value==='color'?'block':'none'" style="padding:5px;font-size:11px">
+                            <option value="transparent" ${(el.preenchimento||'transparent')==='transparent'?'selected':''}>Transparente</option>
+                            <option value="color" ${el.preenchimento==='color'?'selected':''}>Cor sólida</option>
+                            <option value="hachura" ${el.preenchimento==='hachura'?'selected':''}>Hachura (listrado)</option>
+                        </select></div>
+                        <div id="corFundo_${el.id}" class="form-group" style="display:${el.preenchimento==='color'?'block':'none'}"><label>Cor fundo:</label><input type="color" value="${el.preenchimentoCor||'#ffffff'}" oninput="atualizarDado(${el.id}, 'preenchimentoCor', this.value)" style="height:30px;padding:2px"></div>
+                    </div>
+                </div>
+
+                <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:6px;margin-bottom:6px">
+                    <div style="font-size:9px;color:#666">💡 Dica: Arraste o quadrado na etiqueta para mover. Use os campos L (mm) e A (mm) abaixo para tamanho exato. Clique no botão <b>⬜ Quadrado perfeito</b> para deixar L = A.</div>
+                    <button onclick="const e=elementos.find(x=>x.id===${el.id}); if(e){ let m=Math.max(e.w,e.h); e.w=m; e.h=m; renderizarTudo(); autoSalvar(); }" style="width:100%;margin-top:6px;background:#0d6efd;color:white;border:none;padding:6px;border-radius:4px;font-size:11px;cursor:pointer">⬜ Tornar quadrado perfeito (L=A)</button>
+                </div>
+            `;
         }
         const divBox=document.createElement('div'); divBox.className='elemento-box '+(el.campo?'vinculado':''); divBox.innerHTML=`<h4><span>${el.tipo.toUpperCase()} ${el.campo?'🔗 '+el.campo.toUpperCase():''}</span><button class="btn-remover" onclick="removerElemento(${el.id})">Remover</button></h4>${htmlCampos}<div class="row-inputs" style="margin-top:5px;"><div class="form-group"><label>L (mm):</label><input type="number" value="${el.w.toFixed(1)}" oninput="atualizarDimensoes(${el.id}, 'w', this.value)"></div><div class="form-group"><label>A (mm):</label><input type="number" value="${el.h.toFixed(1)}" oninput="atualizarDimensoes(${el.id}, 'h', this.value)"></div></div>`; container.appendChild(divBox);
     });
@@ -757,7 +819,45 @@ function renderizarEtiqueta(){
             } 
         }
         else if(el.tipo==='ean13'){ if(el.valor){ const eanDiv=document.createElement('div'); eanDiv.className='preview-ean13'; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.style.width='100%'; svg.style.height='100%'; eanDiv.appendChild(svg); itemDiv.appendChild(eanDiv); setTimeout(()=>{ try{ JsBarcode(svg, el.valor, {format:"EAN13", displayValue:true, fontSize:el.tamTexto||9, textMargin:el.eanEspaco!==undefined?el.eanEspaco:2, margin:0, width:el.eanLargura||1.5, height:40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">EAN inválido</text>`; } },0); } }
-        else if(el.tipo==='linha'){ const linhaDiv=document.createElement('div'); linhaDiv.className='preview-linha'; let esp=mmParaPx(el.espessuraLinha||1); const li=document.createElement('div'); li.className='linha-interna'; if(el.orientacao==='vertical'){ li.style.width=esp+'px'; li.style.height='100%'; } else { li.style.width='100%'; li.style.height=esp+'px'; } linhaDiv.appendChild(li); itemDiv.appendChild(linhaDiv); }
+        else if(el.tipo==='linha'){ 
+            const linhaDiv=document.createElement('div'); 
+            linhaDiv.className='preview-linha'; 
+            linhaDiv.style.display='flex'; linhaDiv.style.alignItems='center'; linhaDiv.style.justifyContent='center';
+            let esp=mmParaPx(el.espessuraLinha||1);
+            let cor=el.bordaCor||'#000000';
+            let estilo=el.bordaEstilo||'solid';
+            const li=document.createElement('div'); 
+            li.className='linha-interna'; 
+            li.style.backgroundColor=cor;
+            if(el.orientacao==='vertical'){ li.style.width=esp+'px'; li.style.height='100%'; li.style.borderLeft = esp+'px '+estilo+' '+cor; li.style.background='transparent'; } 
+            else if(el.orientacao==='diagonal'){ li.style.width='100%'; li.style.height='2px'; li.style.background=cor; li.style.transform='rotate(35deg)'; li.style.transformOrigin='center'; }
+            else { li.style.width='100%'; li.style.height=esp+'px'; li.style.borderTop = esp+'px '+estilo+' '+cor; li.style.background='transparent'; } 
+            if(estilo==='dashed' || estilo==='dotted' || estilo==='double'){ li.style.background='transparent'; }
+            linhaDiv.appendChild(li); itemDiv.appendChild(linhaDiv); 
+        }
+        else if(el.tipo==='quadrado'){
+            const quadDiv=document.createElement('div');
+            quadDiv.className='preview-linha';
+            quadDiv.style.width='100%'; quadDiv.style.height='100%'; quadDiv.style.display='flex'; quadDiv.style.alignItems='center'; quadDiv.style.justifyContent='center';
+            const box=document.createElement('div');
+            box.style.width='100%'; box.style.height='100%';
+            box.style.borderStyle=el.bordaEstilo||'solid';
+            box.style.borderWidth=(el.bordaEspessura!==undefined?el.bordaEspessura:1.5)+'px';
+            box.style.borderColor=el.bordaCor||'#000000';
+            box.style.borderRadius=(el.bordaRaio||0)+'px';
+            box.style.boxSizing='border-box';
+            if(el.preenchimento==='color'){
+                box.style.backgroundColor=el.preenchimentoCor||'#ffffff';
+                box.style.backgroundImage='none';
+            } else if(el.preenchimento==='hachura'){
+                box.style.backgroundColor='transparent';
+                box.style.backgroundImage='repeating-linear-gradient(45deg, '+(el.bordaCor||'#000')+' 0px, '+(el.bordaCor||'#000')+' 1px, transparent 1px, transparent 6px)';
+            } else {
+                box.style.backgroundColor='transparent';
+            }
+            quadDiv.appendChild(box);
+            itemDiv.appendChild(quadDiv);
+        }
         etiqueta.appendChild(itemDiv);
     });
     ativarArrasto();
