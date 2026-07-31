@@ -50,7 +50,7 @@
     <a href="testes.html" style="background:#212529;color:white"><i class="bi bi-clipboard-check"></i> Testes (atual)</a>
     <a href="logs.html"><i class="bi bi-file-text"></i> Logs / Evidências</a>
     <a href="etiquetas.html" style="background:#e7f1ff;color:#0d6efd;font-weight:700"><i class="bi bi-printer"></i> Etiquetas 🆕</a>
-    <a href="javascript:void(0)" onclick="if(window._ultimoLog) imprimirEtiquetaAuto(window._ultimoLog); toggleMenuSuspenso();"><i class="bi bi-upc-scan"></i> Imprimir Última Etiqueta</a>
+    <a href="javascript:void(0)" onclick="if(window._ultimoLog){ if(window._ultimoLog.resultado!=='APROVADO'){ alert('🚫 Último teste foi REPROVADO - etiqueta só para APROVADOS'); } else { imprimirEtiquetaAuto(window._ultimoLog); } } toggleMenuSuspenso();"><i class="bi bi-upc-scan"></i> Imprimir Última Etiqueta (só APROVADO)</a>
   </div>
 </div>
 
@@ -163,7 +163,7 @@
 <button class="btn btn-dark btn-sm" onclick="window.print()">Imprimir</button>
 <button class="btn btn-primary btn-sm" onclick="forcarSalvarRede()">Salvar na Rede</button>
 <button class="btn btn-success btn-sm" onclick="voltarParaSerieManual()">Próximo Leitor</button>
-<button class="btn btn-warning btn-sm" onclick="if(window._ultimoLog) imprimirEtiquetaAuto(window._ultimoLog)"><i class="bi bi-printer"></i> Imprimir Etiqueta</button>
+<button class="btn btn-warning btn-sm" id="btnImprimirComprovante" onclick="if(window._ultimoLog){ if(window._ultimoLog.resultado!=='APROVADO'){ alert('🚫 Só APROVADO gera etiqueta'); } else { imprimirEtiquetaAuto(window._ultimoLog); } }"><i class="bi bi-printer"></i> Imprimir Etiqueta (só APROVADO)</button>
 </div>
 <div id="statusSalvoRede" class="mt-2 small text-center"></div>
 </div>
@@ -289,6 +289,11 @@ function salvarEtiquetaParaImpressao(log){
   }catch(e){ return null; }
 }
 function solicitarImpressaoEtiqueta(log){
+  // BLOQUEIO: só solicita se APROVADO
+  if(log && log.resultado && log.resultado!=='APROVADO'){
+    console.log('Bloqueado: teste REPROVADO não gera etiqueta');
+    return;
+  }
   const etiqueta = salvarEtiquetaParaImpressao(log);
   let modalExist = document.getElementById('modalImpressaoEtiqueta');
   if(modalExist) modalExist.remove();
@@ -394,22 +399,45 @@ async function finalizar(){
   let log={log_id:'LOG-'+fim.toISOString().slice(0,10).replace(/-/g,'')+'-'+teste.id.slice(-6),teste_id:teste.id,inicio_br:new Date(dadosTeste.inicio).toLocaleString('pt-BR'),fim_br:fim.toLocaleString('pt-BR'),produto:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,resultado:res,duracao_segundos:dur,leituras:dadosTeste.leituras,codigosNomes:dadosTeste.codigosNomes,hash:btoa(teste.id+'|'+dadosTeste.serie+'|'+res).slice(0,32).toUpperCase()};
   let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');logs.unshift(log);localStorage.setItem('logs_evidencia',JSON.stringify(logs));window._ultimoLog=log;
   document.getElementById('resultadoFinal').style.display='block';
-  document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center ${todos?'bg-success':'bg-danger'} text-white"><h3>${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Etiqueta será impressa automaticamente...</span></div></div>`;
+  if(todos){
+    document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center bg-success text-white"><h3>✅ ${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Etiqueta será impressa automaticamente...</span></div></div>`;
+  } else {
+    document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center bg-danger text-white"><h3>❌ ${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🚫 Etiqueta NÃO será gerada - teste reprovado</span></div></div>`;
+  }
   preencher(log);
   atualizarContadorTotal();
-  document.getElementById('btnEtiqTop').style.display='inline-flex';
+  // Botão imprimir etiqueta só aparece se APROVADO
+  const btnTop = document.getElementById('btnEtiqTop');
+  if(btnTop){
+    if(todos) btnTop.style.display='inline-flex';
+    else btnTop.style.display='none';
+  }
   try{
-    salvarEtiquetaParaImpressao(log);
-    const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
-    const deveImprimir = (chkAuto && chkAuto.checked);
-    if(deveImprimir){ setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800); } else { setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500); }
-  }catch(e){}
+    if(todos){
+      // SÓ GERA E IMPRIME ETIQUETA QUANDO APROVADO
+      salvarEtiquetaParaImpressao(log);
+      const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
+      const deveImprimir = (chkAuto && chkAuto.checked);
+      if(deveImprimir){ setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800); } else { setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500); }
+    } else {
+      console.log('Teste REPROVADO - etiqueta não será gerada');
+      // Limpa qualquer etiqueta anterior para não imprimir errado
+      // Não salva etiqueta_para_impressao quando reprovado
+      localStorage.removeItem('etiqueta_para_impressao');
+    }
+  }catch(e){ console.log('Erro etiqueta', e); }
   if(document.getElementById('chkAutoSalvar').checked){ await salvarLogNaRede(log); }
   if(document.getElementById('chkAutoVolta').checked){ iniciarContagemRegressivaParaSerie(); }
 }
 
 let _ultimaImpressao = 0;
 function imprimirEtiquetaAuto(log){
+  // BLOQUEIO: só imprime se APROVADO
+  if(log && log.resultado && log.resultado!=='APROVADO'){
+    console.log('Bloqueado: teste REPROVADO não gera etiqueta');
+    alert('🚫 Etiqueta só é gerada quando o teste é APROVADO.\nResultado atual: '+log.resultado);
+    return;
+  }
   const agora = Date.now();
   if(agora - _ultimaImpressao < 3000){ console.log('Impressão bloqueada - já imprimiu há menos de 3s'); return; }
   _ultimaImpressao = agora;
