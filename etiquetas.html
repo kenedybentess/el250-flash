@@ -74,12 +74,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .config-flutuante-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10001;display:none;align-items:center;justify-content:center}
 .config-flutuante-overlay.ativo{display:flex}
 .config-flutuante-box{background:white;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,0.35);width:560px;max-width:95vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;animation:modalPop 0.25s ease;border:2px solid #6366f1}
-.config-flutuante-header{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px 16px;font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none;touch-action:none}
-.config-flutuante-header:active{cursor:grabbing}
-.config-flutuante-box.arrastando{opacity:0.9;box-shadow:0 25px 60px rgba(0,0,0,0.45);transition:none}
-.config-flutuante-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%)}
-.config-flutuante-box.posicionado{transform:none}
-.config-flutuante-overlay{background:rgba(0,0,0,0.25)}
+.config-flutuante-header{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px 16px;font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center}
 .config-flutuante-body{padding:14px;overflow-y:auto;flex:1;background:#f9fafb}
 .config-flutuante-footer{display:flex;gap:8px;padding:10px 14px;background:#f3f4f6;border-top:1px solid #e5e7eb}
 .etiqueta-item-preview.selecionado{border:2px solid #6366f1 !important;box-shadow:0 0 0 3px rgba(99,102,241,0.3);z-index:10}
@@ -90,6 +85,11 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .padrao-linhas-box h3{font-size:11px;color:#c2410c;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 .espessura-chip{display:inline-block;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:bold;margin:2px;cursor:pointer;border:1px solid #ddd}
 .espessura-chip.ativo{background:#f97316;color:white;border-color:#f97316}
+.config-flutuante-header{cursor:move;user-select:none;touch-action:none}
+.config-flutuante-header:active{cursor:grabbing}
+.config-flutuante-box.arrastando{opacity:0.9;box-shadow:0 25px 60px rgba(0,0,0,0.45);transition:none}
+.config-flutuante-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%)}
+.config-flutuante-box.posicionado{transform:none}
 
 </style>
 </head>
@@ -117,7 +117,7 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
             <div style="display:flex;gap:6px;align-items:center">
                 <button onclick="centralizarElementoX(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↔️ Cent. X</button>
                 <button onclick="centralizarElementoY(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↕️ Cent. Y</button>
-                <span style="cursor:pointer;font-size:18px" onclick="fecharConfigFlutuante()">✕</span>
+                <button onclick="event.stopPropagation(); resetarPosicaoFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px">📍 Centro</button><span style="cursor:pointer;font-size:18px" onclick="fecharConfigFlutuante()">✕</span>
             </div>
         </div>
         <div class="config-flutuante-body" id="bodyConfigFlutuante"></div>
@@ -202,13 +202,11 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
             <button class="btn-add" style="background:#fb923c;margin:0;font-size:11px;padding:8px" onclick="normalizarLinhas()">⚖️ Normalizar</button>
         </div>
         <div style="display:flex;gap:6px;margin-top:6px">
-            <button class="btn-add" style="background:#fff;color:#c2410c;border:1px solid #f97316;margin:0;font-size:10px;padding:6px" onclick="verificarLinhasForaPadrao()">🔍 Verificar fora padrão</button>
+            <button class="btn-add" style="background:#fff;color:#c2410c;border:1px solid #f97316;margin:0;font-size:10px;padding:6px" onclick="verificarLinhasForaPadrao()">🔍 Verificar</button>
             <button class="btn-add" style="background:#fff;color:#c2410c;border:1px solid #f97316;margin:0;font-size:10px;padding:6px" onclick="adicionarLinhaPadrao()">➕ Linha padrão</button>
         </div>
         <div id="listaLinhasPadrao" style="margin-top:8px;max-height:100px;overflow-y:auto;font-size:10px"></div>
-        <div style="font-size:9px;color:#9a3412;margin-top:6px">💡 Dica: Defina a espessura e clique em Aplicar para deixar todas as linhas no mesmo padrão.</div>
     </div>
-
     <h2>Elementos - VINCULADOS</h2>
     <div id="container-elementos-form"></div>
     <button class="btn-add" onclick="abrirModalAdd()">▼ Adicionar Elemento (menu suspenso) ▼</button>
@@ -282,11 +280,14 @@ function vincularTodos(campo, novoValor){
         if(inp && document.activeElement!==inp) inp.value=novoValor;
     }
     elementos.forEach(el=>{
-        if(el.campo===campo){
+        if(el.campo===campo || (campo==='ean13' && el.tipo==='ean13')){
             if(campo==='codigo'){
                 if(el.tipo==='texto') el.valor=`Cód: ${novoValor}`;
                 else el.valor=novoValor;
-            } else if(campo==='ean13'){ el.valor=novoValor; }
+            } else if(campo==='ean13'){ 
+                el.valor=novoValor; 
+                if(el.tipo==='ean13' && !el.campo) el.campo='ean13';
+            }
             else if(campo==='descricao'){ el.valor=novoValor; }
             else if(campo==='serie'){
                 if(el.tipo==='texto') el.valor=`S/N: ${novoValor}`;
@@ -297,7 +298,7 @@ function vincularTodos(campo, novoValor){
     renderizarEtiqueta();
     if(document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='SELECT'){
         inicializarFormulario();
-        if(window._configId){ atualizarFlutuante(); }
+        if(window._configId){ try{ atualizarFlutuante(); }catch{} }
     }
     autoSalvar();
     try{
@@ -391,9 +392,10 @@ function carregarProdutosSelect(){
         const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
         sel.innerHTML='<option value="">-- Selecione --</option>';
         produtos.forEach(p=>{
-            const opt=document.createElement('option'); opt.value=p.id; opt.textContent=`${p.codigo} - ${p.nome} ${p.ean13? '('+p.ean13+')':''}`; sel.appendChild(opt);
+            const eanInfo = p.ean13 ? ` EAN:${p.ean13}` : ' (sem EAN)';
+            const opt=document.createElement('option'); opt.value=p.id; opt.textContent=`${p.codigo} - ${p.nome}${eanInfo}`; sel.appendChild(opt);
         });
-    }catch(e){}
+    }catch(e){ console.log('Erro carregar produtos', e); }
 }
 function carregarSeriesSelect(){
     const sel=document.getElementById('selectSerie');
@@ -412,10 +414,26 @@ function aoSelecionarProduto(prodId){
     document.getElementById('inputCodProduto').value=p.codigo||'';
     document.getElementById('inputDescricao').value=p.nome||'';
     document.getElementById('inputEAN13').value=p.ean13||'';
-    dadosEtiqueta.codigo=p.codigo||''; dadosEtiqueta.descricao=p.nome||''; dadosEtiqueta.ean13=p.ean13||'';
+    dadosEtiqueta.codigo=p.codigo||''; 
+    dadosEtiqueta.descricao=p.nome||''; 
+    dadosEtiqueta.ean13=p.ean13||'';
+    dadosEtiqueta.codigoElgin=p.codigo||'';
+    elementos.forEach(el=>{
+        if(el.tipo==='ean13'){
+            el.valor = p.ean13||'';
+            el.campo = 'ean13';
+        }
+        if(el.tipo==='barcode' && el.campo==='codigo'){
+            el.valor = p.codigo||'';
+        }
+    });
     vincularTodos('codigo', dadosEtiqueta.codigo);
     vincularTodos('descricao', dadosEtiqueta.descricao);
     vincularTodos('ean13', dadosEtiqueta.ean13);
+    renderizarTudo();
+    autoSalvar();
+    const status = document.getElementById('statusSave');
+    if(status) status.innerText = `✅ Produto ${p.codigo} carregado - EAN13: ${p.ean13||'sem EAN'}`;
 }
 function aoSelecionarSerie(serie){ if(!serie) return; document.getElementById('inputSerie').value=serie; vincularTodos('serie', serie); }
 
@@ -536,7 +554,7 @@ function fecharModalAdd(){ document.getElementById('modalAddElemento').classList
 function confirmarAddElemento(){
     const tipo=document.getElementById('selectTipoElemento').value;
     fecharModalAdd();
-    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:(tipo==='quadrado'?40:(tipo==='linha'?90:90))))));
+    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:(tipo==='quadrado'?40:90)))));
     let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:(tipo==='data'?8:(tipo==='quadrado'?25:6)))));
     let valorPadrao=''; let campoPadrao='';
     if(tipo==='texto') valorPadrao='Novo Texto';
@@ -545,8 +563,7 @@ function confirmarAddElemento(){
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
     else if(tipo==='quadrado') { valorPadrao=''; campoPadrao=''; }
-    let espPadrao = (typeof _padraoEspessuraLinha !== 'undefined' ? _padraoEspessuraLinha : 0.8);
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha: (tipo==='linha'?espPadrao:1), distanciaTexto:2, eanEspaco:3, eanLargura:1.8, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:48, mostrarTexto:true, margemBarcode:4, alignTexto:'center', fonteTexto:'monospace', bordaEspessura: (tipo==='quadrado'?espPadrao:1.5), bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff', corFundo:'#ffffff', corBarras:'#000000', negritoTexto:false});
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:3, eanLargura:1.8, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:48, mostrarTexto:true, margemBarcode:4, alignTexto:'center', fonteTexto:'monospace', bordaEspessura:1.5, bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff', corFundo:'#ffffff', corBarras:'#000000', negritoTexto:false});
     renderizarTudo(); autoSalvar();
     setTimeout(()=>{ abrirConfigFlutuante(idContador-1); }, 300);
 }
@@ -710,152 +727,6 @@ function gerarHtmlCampos(el){
 }
 
 // ---- Tela flutuante ----
-
-// ==== MODO PADRÃO DE ESPESSURA PARA LINHAS ====
-let _padraoEspessuraLinha = parseFloat(localStorage.getItem('padrao_espessura_linha')||'0.8');
-
-function definirPadraoLinha(valor, salvar=true){
-    _padraoEspessuraLinha = parseFloat(valor)||0.8;
-    const input = document.getElementById('inputPadraoEspessura');
-    const label = document.getElementById('valorPadraoEsp');
-    if(input) input.value = _padraoEspessuraLinha;
-    if(label) label.textContent = _padraoEspessuraLinha.toFixed(1)+'mm';
-    // Atualiza chips
-    document.querySelectorAll('.espessura-chip').forEach(chip=>{
-        const esp = parseFloat(chip.getAttribute('data-esp'));
-        if(Math.abs(esp - _padraoEspessuraLinha) < 0.15) chip.classList.add('ativo');
-        else chip.classList.remove('ativo');
-    });
-    if(salvar){
-        try{ localStorage.setItem('padrao_espessura_linha', _padraoEspessuraLinha); }catch{}
-        atualizarListaLinhasPadrao();
-    }
-}
-function aplicarPadraoTodasLinhas(){
-    const linhas = elementos.filter(e=>e.tipo==='linha' || e.tipo==='quadrado');
-    if(linhas.length===0){ alert('Nenhuma linha ou quadrado encontrado na etiqueta.'); return; }
-    if(!confirm(`Aplicar espessura padrão de ${_padraoEspessuraLinha}mm em ${linhas.length} linha(s)/quadrado(s)?`)) return;
-    linhas.forEach(el=>{
-        if(el.tipo==='linha') el.espessuraLinha = _padraoEspessuraLinha;
-        else if(el.tipo==='quadrado') el.bordaEspessura = _padraoEspessuraLinha;
-    });
-    renderizarTudo();
-    atualizarListaLinhasPadrao();
-    autoSalvar();
-    if(window._configId) atualizarFlutuante();
-    document.getElementById('statusSave').innerText = `✅ ${linhas.length} linhas padronizadas para ${_padraoEspessuraLinha}mm`;
-}
-function normalizarLinhas(){
-    const linhas = elementos.filter(e=>e.tipo==='linha');
-    if(linhas.length<=1){ alert('Precisa de pelo menos 2 linhas para normalizar.'); return; }
-    // Pega a espessura mais comum (moda)
-    const contagem = {};
-    linhas.forEach(el=>{ const k = (el.espessuraLinha||0.8).toFixed(1); contagem[k]=(contagem[k]||0)+1; });
-    let moda = _padraoEspessuraLinha.toFixed(1);
-    let maxCount=0;
-    for(let k in contagem){ if(contagem[k]>maxCount){ maxCount=contagem[k]; moda=k; } }
-    definirPadraoLinha(parseFloat(moda));
-    aplicarPadraoTodasLinhas();
-}
-function verificarLinhasForaPadrao(){
-    const fora = elementos.filter(e=> e.tipo==='linha' && Math.abs((e.espessuraLinha||0.8) - _padraoEspessuraLinha) > 0.1);
-    if(fora.length===0){ alert(`✅ Todas as ${elementos.filter(e=>e.tipo==='linha').length} linhas estão no padrão ${_padraoEspessuraLinha}mm`); }
-    else {
-        alert(`⚠️ ${fora.length} linha(s) fora do padrão ${_padraoEspessuraLinha}mm:\n` + fora.map(e=>`#${e.id} - ${e.espessuraLinha}mm em X:${e.x.toFixed(1)} Y:${e.y.toFixed(1)}`).join('\n'));
-        // Destaca no preview
-        document.querySelectorAll('.etiqueta-item-preview').forEach(div=>{
-            const id=parseInt(div.getAttribute('data-id'));
-            if(fora.some(f=>f.id===id)) div.style.boxShadow='0 0 0 3px #f97316';
-        });
-        setTimeout(()=>{ renderizarEtiqueta(); }, 3000);
-    }
-    atualizarListaLinhasPadrao();
-}
-function adicionarLinhaPadrao(){
-    elementos.push({id:idContador++, tipo:'linha', valor:'', x:5, y:20, w:90, h:0.8, orientacao:'horizontal', espessuraLinha:_padraoEspessuraLinha, bordaCor:'#000000', bordaEstilo:'solid'});
-    renderizarTudo(); autoSalvar();
-}
-function atualizarListaLinhasPadrao(){
-    const cont = document.getElementById('contadorLinhas');
-    const lista = document.getElementById('listaLinhasPadrao');
-    if(!cont || !lista) return;
-    const linhas = elementos.filter(e=>e.tipo==='linha' || e.tipo==='quadrado');
-    cont.textContent = `${linhas.length} ${linhas.length===1?'linha':'linhas'}`;
-    if(linhas.length===0){ lista.innerHTML='<div style="color:#999;text-align:center;padding:4px">Nenhuma linha</div>'; return; }
-    lista.innerHTML = linhas.map(el=>{
-        const isFora = el.tipo==='linha' ? Math.abs((el.espessuraLinha||0.8) - _padraoEspessuraLinha) > 0.1 : Math.abs((el.bordaEspessura||1.5) - _padraoEspessuraLinha) > 0.1;
-        const esp = el.tipo==='linha' ? (el.espessuraLinha||0.8) : (el.bordaEspessura||1.5);
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 4px;background:${isFora?'#ffedd5':'white'};border:1px solid ${isFora?'#f97316':'#eee'};border-radius:4px;margin-bottom:2px;cursor:pointer" onclick="abrirConfigFlutuante(${el.id})">
-            <span><b>#${el.id}</b> ${el.tipo==='linha'?'➖':'⬜'} ${esp.toFixed(1)}mm ${isFora?'⚠️':''}</span>
-            <span style="font-size:9px;color:#666">X:${el.x.toFixed(0)} Y:${el.y.toFixed(0)}</span>
-        </div>`;
-    }).join('');
-}
-
-// Inicializa padrão ao carregar
-setTimeout(()=>{ definirPadraoLinha(_padraoEspessuraLinha, false); atualizarListaLinhasPadrao(); }, 500);
-
-// ==== DRAGGABLE FLUTUANTE ====
-let _flutuantePos = {x:null, y:null, isPosicionado:false};
-let _dragFlutuante = {ativo:false, offsetX:0, offsetY:0};
-function iniciarArrasteFlutuante(e){
-    const box = document.getElementById('boxConfigFlutuante');
-    if(!box) return;
-    if(e.target.tagName==='BUTTON' || e.target.closest('button')) return;
-    e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const rect = box.getBoundingClientRect();
-    _dragFlutuante.ativo = true;
-    _dragFlutuante.offsetX = clientX - rect.left;
-    _dragFlutuante.offsetY = clientY - rect.top;
-    box.classList.add('arrastando');
-    box.classList.add('posicionado');
-    document.addEventListener('mousemove', moverFlutuante);
-    document.addEventListener('mouseup', pararArrasteFlutuante);
-    document.addEventListener('touchmove', moverFlutuante, {passive:false});
-    document.addEventListener('touchend', pararArrasteFlutuante);
-}
-function moverFlutuante(e){
-    if(!_dragFlutuante.ativo) return;
-    e.preventDefault();
-    const box = document.getElementById('boxConfigFlutuante');
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    let x = clientX - _dragFlutuante.offsetX;
-    let y = clientY - _dragFlutuante.offsetY;
-    const maxX = window.innerWidth - box.offsetWidth - 5;
-    const maxY = window.innerHeight - box.offsetHeight - 5;
-    x = Math.max(5, Math.min(x, maxX));
-    y = Math.max(5, Math.min(y, maxY));
-    box.style.left = x + 'px';
-    box.style.top = y + 'px';
-    box.style.transform = 'none';
-    _flutuantePos = {x, y, isPosicionado:true};
-    try{ localStorage.setItem('flutuante_pos', JSON.stringify(_flutuantePos)); }catch{}
-}
-function pararArrasteFlutuante(){
-    if(!_dragFlutuante.ativo) return;
-    _dragFlutuante.ativo = false;
-    const box = document.getElementById('boxConfigFlutuante');
-    if(box) box.classList.remove('arrastando');
-    document.removeEventListener('mousemove', moverFlutuante);
-    document.removeEventListener('mouseup', pararArrasteFlutuante);
-    document.removeEventListener('touchmove', moverFlutuante);
-    document.removeEventListener('touchend', pararArrasteFlutuante);
-}
-function resetarPosicaoFlutuante(){
-    const box = document.getElementById('boxConfigFlutuante');
-    if(!box) return;
-    box.style.left = '50%';
-    box.style.top = '50%';
-    box.style.transform = 'translate(-50%,-50%)';
-    box.classList.remove('posicionado');
-    _flutuantePos = {x:null, y:null, isPosicionado:false};
-    try{ localStorage.removeItem('flutuante_pos'); }catch{}
-}
-
-
 function abrirConfigFlutuante(id){
     const el = elementos.find(e=>e.id===id);
     if(!el) return;
@@ -876,12 +747,8 @@ function abrirConfigFlutuante(id){
             box.style.transform = 'none';
             box.classList.add('posicionado');
             _flutuantePos = saved;
-        } else {
-            resetarPosicaoFlutuante();
         }
-    }catch{
-        resetarPosicaoFlutuante();
-    }
+    }catch{}
 }
 function fecharConfigFlutuante(){
     document.getElementById('modalConfigFlutuante').classList.remove('ativo');
