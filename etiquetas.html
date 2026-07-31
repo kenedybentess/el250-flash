@@ -34,7 +34,6 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .preview-text{width:100%;height:100%;display:flex;align-items:center;overflow:hidden;pointer-events:none;padding:0 2px}
 .preview-linha{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .linha-interna{background-color:#000 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.preview-quadrado{width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .menu-suspenso{position:fixed;top:12px;right:12px;z-index:9999}
 .menu-btn{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 12px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;transition:0.2s}
 .menu-dropdown{position:absolute;top:54px;right:0;width:220px;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);overflow:hidden;display:none;border:1px solid #dee2e6}
@@ -497,11 +496,11 @@ function confirmarAddElemento(){
     else if(tipo==='ean13') { valorPadrao=dadosEtiqueta.ean13; campoPadrao='ean13'; }
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:2, eanLargura:1.6, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:45, mostrarTexto:true, margemBarcode:2, alignTexto:'center', fonteTexto:'monospace', bordaEspessura:1.5, bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff'});
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:3, eanLargura:1.8, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:48, mostrarTexto:true, margemBarcode:4, alignTexto:'center', fonteTexto:'monospace', bordaEspessura:1.5, bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff', corFundo:'#ffffff', corBarras:'#000000', negritoTexto:false});
     renderizarTudo(); autoSalvar();
 }
 document.getElementById('selectTipoElemento')?.addEventListener('change', function(){
-    const dicas={'texto':'Texto livre','imagem':'Logo Elgin','barcode':'Código produto Code39','ean13':'EAN13','barcode_uniao':'🔗 UNIÃO 18 dígitos: EAN4 últimos s/ verif + Série 8 + Data DDMMYY','data':'📅 DATA ATUAL automática (puxa data de hoje)','linha':'Linha separadora','quadrado':'⬜ Quadrado/Retângulo com borda ajustável, raio, preenchimento e estilo'};
+    const dicas={'texto':'Texto livre + posição X/Y','imagem':'Logo Elgin + posição','barcode':'Código produto Code39 + posição','ean13':'EAN13 com ajustes completos + posição','barcode_uniao':'🔗 UNIÃO 18 dígitos + ajustes finos + posição','data':'📅 DATA ATUAL + posição','linha':'Linha com cor/estilo + posição X/Y','quadrado':'⬜ Quadrado/Retângulo com borda, raio e posição'};
     document.getElementById('dicaTipo').innerText=dicas[this.value]||'';
 });
 function inicializarFormulario(){
@@ -544,17 +543,14 @@ function inicializarFormulario(){
                 <div style="background:#d1ecf1;border:2px solid #17a2b8;border-radius:8px;padding:8px;margin-bottom:8px">
                     <div style="font-size:11px;font-weight:bold;color:#0c5460">📅 DATA ATUAL - PUXA AUTOMÁTICO</div>
                     <div style="font-family:monospace;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;margin-top:6px;font-size:14px;font-weight:bold;text-align:center">${dataPreview}</div>
-                    <div style="font-size:9px;color:#666;margin-top:4px">Atualiza sozinho com a data de hoje ao imprimir</div>
                 </div>
                 <div class="form-group"><label>📅 Formato da Data:</label>
                 <select onchange="atualizarDado(${el.id}, 'formatoData', this.value); el.valor=gerarDataAtual(this.value); renderizarEtiqueta(); autoSalvar();" style="width:100%;padding:6px;border:1px solid #17a2b8;border-radius:4px;font-size:12px;background:#e7f1ff">
-                    <option value="DD/MM/AAAA" ${el.formatoData==='DD/MM/AAAA'?'selected':''}>DD/MM/AAAA - Ex: 28/07/2026</option>
-                    <option value="DD/MM/AA" ${el.formatoData==='DD/MM/AA'?'selected':''}>DD/MM/AA - Ex: 28/07/26</option>
-                    <option value="DDMMYY" ${el.formatoData==='DDMMYY'?'selected':''}>DDMMYY - Ex: 280726 (para barcode união)</option>
-                    <option value="DDMMYYYY" ${el.formatoData==='DDMMYYYY'?'selected':''}>DDMMYYYY - Ex: 28072026</option>
-                    <option value="AAAA-MM-DD" ${el.formatoData==='AAAA-MM-DD'?'selected':''}>AAAA-MM-DD - Ex: 2026-07-28</option>
-                    <option value="DD-MM-AAAA" ${el.formatoData==='DD-MM-AAAA'?'selected':''}>DD-MM-AAAA - Ex: 28-07-2026</option>
-                    <option value="DD/MM/AAAA HH:MM" ${el.formatoData==='DD/MM/AAAA HH:MM'?'selected':''}>DD/MM/AAAA HH:MM - com hora</option>
+                    <option value="DD/MM/AAAA" ${el.formatoData==='DD/MM/AAAA'?'selected':''}>DD/MM/AAAA</option>
+                    <option value="DD/MM/AA" ${el.formatoData==='DD/MM/AA'?'selected':''}>DD/MM/AA</option>
+                    <option value="DDMMYY" ${el.formatoData==='DDMMYY'?'selected':''}>DDMMYY</option>
+                    <option value="DDMMYYYY" ${el.formatoData==='DDMMYYYY'?'selected':''}>DDMMYYYY</option>
+                    <option value="AAAA-MM-DD" ${el.formatoData==='AAAA-MM-DD'?'selected':''}>AAAA-MM-DD</option>
                 </select></div>
                 <div class="form-group"><label>Tamanho Fonte:</label><input type="number" value="${el.tamFonte||11}" min="6" max="30" oninput="atualizarDado(${el.id}, 'tamFonte', parseInt(this.value))"></div>
                 <div class="form-group"><label><input type="checkbox" ${el.negrito?'checked':''} onchange="atualizarDado(${el.id}, 'negrito', this.checked)"> Negrito</label></div>
@@ -564,25 +560,23 @@ function inicializarFormulario(){
             let ean4 = extrairEAN4Ultimos(dadosEtiqueta.ean13);
             let serie8 = formatarSerie8(dadosEtiqueta.serie);
             let data6 = formatarDataDDMMYY(dadosEtiqueta.data||gerarDataAtual('DDMMYY'));
-            let data8raw = (dadosEtiqueta.data||'').replace(/[^0-9]/g,'');
             let ean13clean = (dadosEtiqueta.ean13||'').replace(/[^0-9]/g,'');
             htmlCampos=`
                 <div style="background:#d1e7dd;border:2px solid #198754;border-radius:8px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE UNIÃO - 18 DÍGITOS</div>
+                    <div style="font-size:11px;font-weight:bold;color:#198754">✅ BARCODE UNIÃO - ${valorPreview.length} DÍGITOS</div>
                     <div style="font-family:monospace;background:white;border:1px solid #198754;border-radius:6px;padding:8px;margin-top:6px;font-size:14px;font-weight:bold;word-break:break-all;text-align:center;letter-spacing:1px">${valorPreview}</div>
-                    <div style="font-size:10px;margin-top:6px;background:rgba(255,255,255,0.8);border-radius:4px;padding:6px;line-height:1.4">
-                        <div>1-4: <b style="background:#fff3cd;padding:1px 4px;border-radius:3px">${ean4}</b> = EAN 4 últimos (sem dígito verif.) - <span style="color:#666">${ean13clean.slice(0,12)} → <b>${ean4}</b></span></div>
-                        <div>5-12: <b style="background:#d1ecf1;padding:1px 4px;border-radius:3px">${serie8}</b> = Série 8 dígitos - <span style="color:#666">${dadosEtiqueta.serie||'---'} → <b>${serie8}</b></span></div>
-                        <div>13-18: <b style="background:#d4edda;padding:1px 4px;border-radius:3px">${data6}</b> = Data DDMMYY - <span style="color:#666">${dadosEtiqueta.data||'hoje'} → <b>${data6}</b></span></div>
+                    <div style="font-size:10px;margin-top:6px;background:rgba(255,255,255,0.8);border-radius:4px;padding:6px">
+                        <div>1-4: <b style="background:#fff3cd;padding:1px 4px;border-radius:3px">${ean4}</b> EAN4</div>
+                        <div>5-12: <b style="background:#d1ecf1;padding:1px 4px;border-radius:3px">${serie8}</b> Série8</div>
+                        <div>13-18: <b style="background:#d4edda;padding:1px 4px;border-radius:3px">${data6}</b> Data</div>
                     </div>
                     <div style="display:flex;gap:4px;margin-top:6px">
-                        <button onclick="navigator.clipboard.writeText('${valorPreview}'); alert('Copiado: '+ '${valorPreview}')" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">📋 Copiar valor</button>
-                        <button onclick="atualizarDado(${el.id}, 'templateUniao', 'ESPEC_FOTO'); renderizarTudo(); autoSalvar();" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">🔄 Reset padrão</button>
+                        <button onclick="navigator.clipboard.writeText('${valorPreview}')" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">📋 Copiar</button>
+                        <button onclick="atualizarDado(${el.id}, 'templateUniao', 'ESPEC_FOTO'); renderizarTudo(); autoSalvar();" style="flex:1;background:white;border:1px solid #198754;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">🔄 Reset</button>
                     </div>
                 </div>
-
                 <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:10px;font-weight:bold;color:#495057;margin-bottom:6px">📋 TEMPLATE DE MONTAGEM</div>
+                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">📋 TEMPLATE</div>
                     <div class="form-group"><label>Template:</label>
                     <select onchange="atualizarDado(${el.id}, 'templateUniao', this.value); document.getElementById('customTpl_${el.id}').style.display = this.value==='CUSTOM' ? 'block' : 'none'; if(this.value!=='CUSTOM'){ renderizarEtiqueta(); autoSalvar(); }" style="width:100%;padding:6px;border:1px solid #198754;border-radius:4px;font-size:11px;background:#e7f1ff">
                         <option value="ESPEC_FOTO" ${el.templateUniao==='ESPEC_FOTO'?'selected':''}>✅ PADRÃO FOTO: EAN4 + SÉRIE8 + DATA6 (18)</option>
@@ -590,29 +584,23 @@ function inicializarFormulario(){
                         <option value="{ean4}{serie8}" ${el.templateUniao==='{ean4}{serie8}'?'selected':''}>Só EAN4 + SERIE8 (12)</option>
                         <option value="{serie8}{data6}" ${el.templateUniao==='{serie8}{data6}'?'selected':''}>Só SERIE8 + DATA6 (14)</option>
                         <option value="{ean13}" ${el.templateUniao==='{ean13}'?'selected':''}>EAN13 completo</option>
-                        <option value="{serie8}" ${el.templateUniao==='{serie8}'?'selected':''}>Só SERIE 8 dígitos</option>
-                        <option value="{codigo}{serie8}" ${el.templateUniao==='{codigo}{serie8}'?'selected':''}>CÓDIGO + SERIE8</option>
-                        <option value="CUSTOM" ${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}','{codigo}{serie8}'].includes(el.templateUniao))?'selected':''}>✏️ Personalizado...</option>
+                        <option value="{serie8}" ${el.templateUniao==='{serie8}'?'selected':''}>Só SERIE 8</option>
+                        <option value="CUSTOM" ${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}'].includes(el.templateUniao))?'selected':''}>✏️ Personalizado...</option>
                     </select></div>
-                    <div id="customTpl_${el.id}" class="form-group" style="display:${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}','{codigo}{serie8}'].includes(el.templateUniao))?'block':'none'}">
-                        <label>Template custom (use {ean4} {ean13} {serie} {serie8} {data} {data6} {data8} {codigo}):</label>
+                    <div id="customTpl_${el.id}" class="form-group" style="display:${(el.templateUniao && !['ESPEC_FOTO','{ean4}{serie8}{data6}','{ean4}{serie8}','{serie8}{data6}','{ean13}','{serie8}'].includes(el.templateUniao))?'block':'none'}">
+                        <label>Custom {ean4} {ean13} {serie} {serie8} {data} {data6} {codigo}:</label>
                         <input type="text" value="${(el.templateUniao==='ESPEC_FOTO'?'':el.templateUniao)||''}" placeholder="{ean4}{serie8}{data6}" oninput="atualizarDado(${el.id}, 'templateUniao', this.value)" style="font-family:monospace;font-size:11px">
-                        <div style="font-size:9px;color:#666;margin-top:2px">Variáveis: {ean4} {ean13} {serie} {serie8} {data} {data6} {codigo} {codigoElgin}</div>
                     </div>
                 </div>
-
                 <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:10px;font-weight:bold;color:#495057;margin-bottom:6px">🎛️ AJUSTES DO CÓDIGO DE BARRAS</div>
+                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🎛️ AJUSTES BARRAS</div>
                     <div class="row-inputs">
                         <div class="form-group"><label>Formato:</label>
                         <select onchange="atualizarDado(${el.id}, 'formatoBarcode', this.value)" style="padding:5px;font-size:11px">
-                            <option value="CODE128" ${(el.formatoBarcode||'CODE128')==='CODE128'?'selected':''}>CODE128 (recomendado)</option>
+                            <option value="CODE128" ${(el.formatoBarcode||'CODE128')==='CODE128'?'selected':''}>CODE128</option>
                             <option value="CODE128B" ${el.formatoBarcode==='CODE128B'?'selected':''}>CODE128B</option>
-                            <option value="CODE128C" ${el.formatoBarcode==='CODE128C'?'selected':''}>CODE128C (só números pares)</option>
                             <option value="CODE39" ${el.formatoBarcode==='CODE39'?'selected':''}>CODE39</option>
-                            <option value="EAN13" ${el.formatoBarcode==='EAN13'?'selected':''}>EAN13 (13 dígitos)</option>
-                            <option value="ITF" ${el.formatoBarcode==='ITF'?'selected':''}>ITF / Interleaved 2 of 5</option>
-                            <option value="codabar" ${el.formatoBarcode==='codabar'?'selected':''}>Codabar</option>
+                            <option value="EAN13" ${el.formatoBarcode==='EAN13'?'selected':''}>EAN13</option>
                         </select></div>
                         <div class="form-group"><label>Mostrar texto:</label>
                         <select onchange="atualizarDado(${el.id}, 'mostrarTexto', this.value==='true')" style="padding:5px;font-size:11px">
@@ -621,48 +609,30 @@ function inicializarFormulario(){
                         </select></div>
                     </div>
                     <div class="row-inputs">
-                        <div class="form-group"><label>Larg. barras: <b>${el.eanLargura||1.6}</b></label>
-                        <input type="range" min="0.5" max="4" step="0.1" value="${el.eanLargura||1.6}" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value" style="width:100%"></div>
-                        <div class="form-group"><label>Altura barras: <b>${el.alturaBarra||45}px</b></label>
-                        <input type="range" min="15" max="120" step="2" value="${el.alturaBarra||45}" oninput="atualizarDado(${el.id}, 'alturaBarra', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Larg. barras: <b>${el.eanLargura||1.6}</b></label><input type="range" min="0.5" max="4" step="0.1" value="${el.eanLargura||1.6}" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value" style="width:100%"></div>
+                        <div class="form-group"><label>Altura: <b>${el.alturaBarra||45}px</b></label><input type="range" min="15" max="120" step="2" value="${el.alturaBarra||45}" oninput="atualizarDado(${el.id}, 'alturaBarra', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
                     </div>
                     <div class="row-inputs">
-                        <div class="form-group"><label>Tam. texto: <b>${el.tamTexto||10}px</b></label>
-                        <input type="range" min="6" max="20" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
-                        <div class="form-group"><label>Dist. texto: <b>${el.distanciaTexto||2}px</b></label>
-                        <input type="range" min="-5" max="20" step="1" value="${el.distanciaTexto!==undefined?el.distanciaTexto:2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Tam. texto: <b>${el.tamTexto||10}px</b></label><input type="range" min="6" max="20" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Dist. texto: <b>${el.distanciaTexto||2}px</b></label><input type="range" min="-5" max="20" step="1" value="${el.distanciaTexto!==undefined?el.distanciaTexto:2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
                     </div>
-                    <div class="row-inputs">
-                        <div class="form-group"><label>Margem lateral:</label>
-                        <input type="number" value="${el.margemBarcode||0}" min="0" max="20" step="1" oninput="atualizarDado(${el.id}, 'margemBarcode', parseInt(this.value))"></div>
-                        <div class="form-group"><label>Alinhamento texto:</label>
-                        <select onchange="atualizarDado(${el.id}, 'alignTexto', this.value)" style="padding:5px;font-size:11px">
-                            <option value="center" ${(el.alignTexto||'center')==='center'?'selected':''}>Centro</option>
-                            <option value="left" ${el.alignTexto==='left'?'selected':''}>Esquerda</option>
-                            <option value="right" ${el.alignTexto==='right'?'selected':''}>Direita</option>
-                        </select></div>
-                    </div>
-                    <div class="row-inputs">
-                        <div class="form-group"><label>Negrito texto:</label>
-                        <select onchange="atualizarDado(${el.id}, 'negrito', this.value==='true')" style="padding:5px;font-size:11px">
-                            <option value="false" ${!el.negrito?'selected':''}>Normal</option>
-                            <option value="true" ${el.negrito?'selected':''}>Negrito</option>
-                        </select></div>
-                        <div class="form-group"><label>Fonte:</label>
-                        <select onchange="atualizarDado(${el.id}, 'fonteTexto', this.value)" style="padding:5px;font-size:11px">
-                            <option value="monospace" ${(el.fonteTexto||'monospace')==='monospace'?'selected':''}>Monospace</option>
-                            <option value="Arial" ${el.fonteTexto==='Arial'?'selected':''}>Arial</option>
-                            <option value="Courier" ${el.fonteTexto==='Courier'?'selected':''}>Courier</option>
-                        </select></div>
-                    </div>
-                </div>
-
-                <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px;margin-bottom:6px">
-                    <div style="font-size:9px;font-weight:bold;color:#856404">🔧 DICA: Se as barras estiverem muito juntas, diminua "Larg. barras". Se muito finas, aumente. Altura ideal 40-60px para etiquetas pequenas.</div>
                 </div>
             `;
         } else if(el.tipo==='ean13'){
+            let eanVal = (el.valor||'').replace(/[^0-9]/g,'');
+            let eanValid = eanVal.length===13;
+            let checkDigit = '';
+            if(eanVal.length>=12){
+                let sum=0; for(let i=0;i<12;i++){ let n=parseInt(eanVal[i]||0); sum+= (i%2===0)? n : n*3; } checkDigit = (10 - (sum%10))%10;
+            }
             htmlCampos=`
+                <div style="background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:11px;font-weight:bold;color:#856404">📦 EAN-13 - ${eanValid?'✅ Válido':'⚠️ '+eanVal.length+'/13'} | verif: ${checkDigit}</div>
+                    <div style="font-family:monospace;background:white;border:1px solid #ccc;border-radius:6px;padding:8px;margin-top:6px;font-size:14px;font-weight:bold;text-align:center;letter-spacing:2px">${eanVal||'---'}</div>
+                    <div style="display:flex;gap:4px;margin-top:6px">
+                        <button onclick="const e=elementos.find(x=>x.id===${el.id}); if(e){ let base=e.valor.replace(/[^0-9]/g,'').slice(0,12); let s=0; for(let i=0;i<12;i++){let n=parseInt(base[i]||0); s+= (i%2===0)? n : n*3;} let d=(10-(s%10))%10; e.valor=base+d; vincularTodos('ean13', e.valor); renderizarTudo(); }" style="flex:1;background:white;border:1px solid #ffc107;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">🔧 Corrigir dígito</button>
+                    </div>
+                </div>
                 <div class="form-group"><label>🔗 Vincular a:</label>
                 <select onchange="vincularCampo(${el.id}, this.value)" class="modal-select" style="padding:6px;font-size:12px">
                     <option value="" ${!el.campo?'selected':''}>✏️ Manual</option>
@@ -670,75 +640,97 @@ function inicializarFormulario(){
                     <option value="codigo" ${el.campo==='codigo'?'selected':''}>📦 Código Produto</option>
                     <option value="serie" ${el.campo==='serie'?'selected':''}>🔢 Nº Série</option>
                 </select></div>
-                <div class="form-group"><label>Valor EAN13:</label><input type="text" value="${el.valor}" maxlength="13" oninput="this.value=this.value.replace(/[^0-9]/g,''); atualizarVinculado(${el.id}, this.value)"></div>
-                <div class="row-inputs"><div class="form-group"><label>Tam. Texto:</label><input type="number" value="${el.tamTexto||9}" min="6" max="18" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value))"></div><div class="form-group"><label>Larg. Barras:</label><input type="number" step="0.1" value="${el.eanLargura||1.5}" min="1" max="3" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value))"></div></div>
-                <div class="form-group"><label>↕️ Espaço barras ↔ número: <b>${el.eanEspaco!==undefined?el.eanEspaco:2}px</b></label>
-                <input type="range" min="0" max="15" value="${el.eanEspaco!==undefined?el.eanEspaco:2}" oninput="atualizarDado(${el.id}, 'eanEspaco', parseInt(this.value)); const b=this.parentElement.querySelector('b'); if(b) b.textContent=this.value+'px';" style="width:100%"></div>
+                <div class="form-group"><label>Valor EAN13:</label><input type="text" value="${el.valor}" maxlength="13" oninput="this.value=this.value.replace(/[^0-9]/g,''); atualizarVinculado(${el.id}, this.value)" style="font-family:monospace;font-weight:bold"></div>
+                <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
+                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🎛️ AJUSTES FINOS EAN13</div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Larg. barras: <b>${el.eanLargura||1.8}</b></label><input type="range" min="0.8" max="4" step="0.1" value="${el.eanLargura||1.8}" oninput="atualizarDado(${el.id}, 'eanLargura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value" style="width:100%"></div>
+                        <div class="form-group"><label>Altura barras: <b>${el.alturaBarra||48}px</b></label><input type="range" min="15" max="120" step="2" value="${el.alturaBarra||48}" oninput="atualizarDado(${el.id}, 'alturaBarra', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Tam. texto: <b>${el.tamTexto||10}px</b></label><input type="range" min="6" max="22" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Espaço texto: <b>${el.eanEspaco!==undefined?el.eanEspaco:3}px</b></label><input type="range" min="0" max="20" step="1" value="${el.eanEspaco!==undefined?el.eanEspaco:3}" oninput="atualizarDado(${el.id}, 'eanEspaco', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Margem: <b>${el.margemBarcode||4}px</b></label><input type="range" min="0" max="20" step="1" value="${el.margemBarcode||4}" oninput="atualizarDado(${el.id}, 'margemBarcode', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Mostrar texto:</label><select onchange="atualizarDado(${el.id}, 'mostrarTexto', this.value==='true')" style="padding:5px;font-size:11px"><option value="true" ${el.mostrarTexto!==false?'selected':''}>Sim</option><option value="false" ${el.mostrarTexto===false?'selected':''}>Só barras</option></select></div>
+                    </div>
+                    <div class="row-inputs">
+                        <div class="form-group"><label>Cor fundo:</label><input type="color" value="${el.corFundo||'#ffffff'}" oninput="atualizarDado(${el.id}, 'corFundo', this.value)" style="height:30px"></div>
+                        <div class="form-group"><label>Cor barras:</label><input type="color" value="${el.corBarras||'#000000'}" oninput="atualizarDado(${el.id}, 'corBarras', this.value)" style="height:30px"></div>
+                    </div>
+                </div>
             `;
         } else if(el.tipo==='linha'){
             htmlCampos=`<div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:6px">
-                <div style="font-size:10px;font-weight:bold;margin-bottom:6px">➖ AJUSTE MANUAL DA LINHA</div>
+                <div style="font-size:10px;font-weight:bold;margin-bottom:6px">➖ LINHA</div>
                 <div class="row-inputs"><div class="form-group"><label>Orientação:</label><select onchange="atualizarDado(${el.id}, 'orientacao', this.value)"><option value="horizontal" ${el.orientacao==='horizontal'?'selected':''}>Horizontal</option><option value="vertical" ${el.orientacao==='vertical'?'selected':''}>Vertical</option><option value="diagonal" ${el.orientacao==='diagonal'?'selected':''}>Diagonal</option></select></div><div class="form-group"><label>Espessura: <b>${el.espessuraLinha||1}px</b></label><input type="range" min="0.5" max="10" step="0.5" value="${el.espessuraLinha||1}" oninput="atualizarDado(${el.id}, 'espessuraLinha', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'"></div></div>
-                <div class="row-inputs"><div class="form-group"><label>Cor:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:32px;padding:2px"></div><div class="form-group"><label>Estilo:</label><select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)"><option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>Sólida</option><option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>Tracejada</option><option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>Pontilhada</option><option value="double" ${el.bordaEstilo==='double'?'selected':''}>Dupla</option></select></div></div>
+                <div class="row-inputs"><div class="form-group"><label>Cor:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:32px"></div><div class="form-group"><label>Estilo:</label><select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)"><option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>Sólida</option><option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>Tracejada</option><option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>Pontilhada</option></select></div></div>
             </div>`;
         } else if(el.tipo==='quadrado'){
             htmlCampos=`
                 <div style="background:#e7f1ff;border:2px solid #0d6efd;border-radius:8px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:11px;font-weight:bold;color:#0d6efd">⬜ QUADRADO / RETÂNGULO - AJUSTE MANUAL</div>
+                    <div style="font-size:11px;font-weight:bold;color:#0d6efd">⬜ QUADRADO / RETÂNGULO</div>
                     <div style="display:flex;gap:6px;margin-top:6px">
-                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
-                            <div style="font-size:9px;color:#666">Largura</div><div style="font-weight:bold">${el.w.toFixed(1)}mm</div>
-                        </div>
-                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
-                            <div style="font-size:9px;color:#666">Altura</div><div style="font-weight:bold">${el.h.toFixed(1)}mm</div>
-                        </div>
-                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center">
-                            <div style="font-size:9px;color:#666">Proporção</div><div style="font-weight:bold">${(el.w/el.h).toFixed(2)}:1 ${Math.abs(el.w-el.h)<0.5?'(⬜ quadrado)':'(▭ retângulo)'}</div>
-                        </div>
+                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center"><div style="font-size:9px">L</div><div style="font-weight:bold">${el.w.toFixed(1)}mm</div></div>
+                        <div style="flex:1;background:white;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center"><div style="font-size:9px">A</div><div style="font-weight:bold">${el.h.toFixed(1)}mm</div></div>
                     </div>
                 </div>
-
                 <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🎨 BORDA</div>
                     <div class="row-inputs">
-                        <div class="form-group"><label>Espessura: <b>${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}px</b></label>
-                        <input type="range" min="0" max="10" step="0.5" value="${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}" oninput="atualizarDado(${el.id}, 'bordaEspessura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
-                        <div class="form-group"><label>Cor da borda:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:30px;padding:2px"></div>
+                        <div class="form-group"><label>Espessura: <b>${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}px</b></label><input type="range" min="0" max="10" step="0.5" value="${el.bordaEspessura!==undefined?el.bordaEspessura:1.5}" oninput="atualizarDado(${el.id}, 'bordaEspessura', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Cor:</label><input type="color" value="${el.bordaCor||'#000000'}" oninput="atualizarDado(${el.id}, 'bordaCor', this.value)" style="height:30px"></div>
                     </div>
                     <div class="row-inputs">
-                        <div class="form-group"><label>Estilo:</label>
-                        <select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)" style="padding:5px;font-size:11px">
-                            <option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>━━ Sólida</option>
-                            <option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>╌ Tracejada</option>
-                            <option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>⋯ Pontilhada</option>
-                            <option value="double" ${el.bordaEstilo==='double'?'selected':''}>═ Dupla</option>
-                            <option value="none" ${el.bordaEstilo==='none'?'selected':''}>Sem borda</option>
-                        </select></div>
-                        <div class="form-group"><label>Raio / Cantos: <b>${el.bordaRaio!==undefined?el.bordaRaio:2}px</b></label>
-                        <input type="range" min="0" max="50" step="1" value="${el.bordaRaio!==undefined?el.bordaRaio:2}" oninput="atualizarDado(${el.id}, 'bordaRaio', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
+                        <div class="form-group"><label>Estilo:</label><select onchange="atualizarDado(${el.id}, 'bordaEstilo', this.value)" style="padding:5px;font-size:11px"><option value="solid" ${(el.bordaEstilo||'solid')==='solid'?'selected':''}>Sólida</option><option value="dashed" ${el.bordaEstilo==='dashed'?'selected':''}>Tracejada</option><option value="dotted" ${el.bordaEstilo==='dotted'?'selected':''}>Pontilhada</option><option value="none" ${el.bordaEstilo==='none'?'selected':''}>Sem</option></select></div>
+                        <div class="form-group"><label>Raio: <b>${el.bordaRaio!==undefined?el.bordaRaio:2}px</b></label><input type="range" min="0" max="50" step="1" value="${el.bordaRaio!==undefined?el.bordaRaio:2}" oninput="atualizarDado(${el.id}, 'bordaRaio', parseInt(this.value)); this.parentElement.querySelector('b').textContent=this.value+'px'" style="width:100%"></div>
                     </div>
-                </div>
-
-                <div style="background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;margin-bottom:8px">
-                    <div style="font-size:10px;font-weight:bold;margin-bottom:6px">🖌️ PREENCHIMENTO</div>
-                    <div class="row-inputs">
-                        <div class="form-group"><label>Fundo:</label>
-                        <select onchange="atualizarDado(${el.id}, 'preenchimento', this.value); document.getElementById('corFundo_${el.id}').style.display=this.value==='color'?'block':'none'" style="padding:5px;font-size:11px">
-                            <option value="transparent" ${(el.preenchimento||'transparent')==='transparent'?'selected':''}>Transparente</option>
-                            <option value="color" ${el.preenchimento==='color'?'selected':''}>Cor sólida</option>
-                            <option value="hachura" ${el.preenchimento==='hachura'?'selected':''}>Hachura (listrado)</option>
-                        </select></div>
-                        <div id="corFundo_${el.id}" class="form-group" style="display:${el.preenchimento==='color'?'block':'none'}"><label>Cor fundo:</label><input type="color" value="${el.preenchimentoCor||'#ffffff'}" oninput="atualizarDado(${el.id}, 'preenchimentoCor', this.value)" style="height:30px;padding:2px"></div>
-                    </div>
-                </div>
-
-                <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:6px;margin-bottom:6px">
-                    <div style="font-size:9px;color:#666">💡 Dica: Arraste o quadrado na etiqueta para mover. Use os campos L (mm) e A (mm) abaixo para tamanho exato. Clique no botão <b>⬜ Quadrado perfeito</b> para deixar L = A.</div>
-                    <button onclick="const e=elementos.find(x=>x.id===${el.id}); if(e){ let m=Math.max(e.w,e.h); e.w=m; e.h=m; renderizarTudo(); autoSalvar(); }" style="width:100%;margin-top:6px;background:#0d6efd;color:white;border:none;padding:6px;border-radius:4px;font-size:11px;cursor:pointer">⬜ Tornar quadrado perfeito (L=A)</button>
+                    <div class="row-inputs"><div class="form-group"><label>Fundo:</label><select onchange="atualizarDado(${el.id}, 'preenchimento', this.value); document.getElementById('corFundo_${el.id}').style.display=this.value==='color'?'block':'none'" style="padding:5px;font-size:11px"><option value="transparent" ${(el.preenchimento||'transparent')==='transparent'?'selected':''}>Transparente</option><option value="color" ${el.preenchimento==='color'?'selected':''}>Cor sólida</option><option value="hachura" ${el.preenchimento==='hachura'?'selected':''}>Hachura</option></select></div><div id="corFundo_${el.id}" class="form-group" style="display:${el.preenchimento==='color'?'block':'none'}"><label>Cor:</label><input type="color" value="${el.preenchimentoCor||'#ffffff'}" oninput="atualizarDado(${el.id}, 'preenchimentoCor', this.value)" style="height:30px"></div></div>
+                    <button onclick="const e=elementos.find(x=>x.id===${el.id}); if(e){ let m=Math.max(e.w,e.h); e.w=m; e.h=m; renderizarTudo(); autoSalvar(); }" style="width:100%;margin-top:6px;background:#0d6efd;color:white;border:none;padding:6px;border-radius:4px;font-size:11px;cursor:pointer">⬜ Tornar quadrado perfeito</button>
                 </div>
             `;
         }
-        const divBox=document.createElement('div'); divBox.className='elemento-box '+(el.campo?'vinculado':''); divBox.innerHTML=`<h4><span>${el.tipo.toUpperCase()} ${el.campo?'🔗 '+el.campo.toUpperCase():''}</span><button class="btn-remover" onclick="removerElemento(${el.id})">Remover</button></h4>${htmlCampos}<div class="row-inputs" style="margin-top:5px;"><div class="form-group"><label>L (mm):</label><input type="number" value="${el.w.toFixed(1)}" oninput="atualizarDimensoes(${el.id}, 'w', this.value)"></div><div class="form-group"><label>A (mm):</label><input type="number" value="${el.h.toFixed(1)}" oninput="atualizarDimensoes(${el.id}, 'h', this.value)"></div></div>`; container.appendChild(divBox);
+        // Painel de localização espacial para TODOS os tipos
+        let posPanel = `
+            <div style="background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:2px solid #6366f1;border-radius:8px;padding:8px;margin-top:8px;margin-bottom:4px">
+                <div style="font-size:10px;font-weight:bold;color:#4338ca;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+                    <span>📍 LOCALIZAÇÃO ESPACIAL (mm)</span>
+                    <span style="font-size:9px;background:#4338ca;color:white;padding:2px 6px;border-radius:10px">X:${el.x.toFixed(1)} Y:${el.y.toFixed(1)}</span>
+                </div>
+                <div class="row-inputs">
+                    <div class="form-group"><label>X (esquerda): <b>${el.x.toFixed(1)}mm</b></label>
+                    <input type="range" min="0" max="120" step="0.5" value="${el.x}" oninput="atualizarPosicao(${el.id}, 'x', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'mm'" style="width:100%">
+                    <input type="number" value="${el.x.toFixed(1)}" step="0.5" style="margin-top:3px;padding:4px;font-size:11px" oninput="atualizarPosicao(${el.id}, 'x', parseFloat(this.value)||0)"></div>
+                    <div class="form-group"><label>Y (topo): <b>${el.y.toFixed(1)}mm</b></label>
+                    <input type="range" min="0" max="100" step="0.5" value="${el.y}" oninput="atualizarPosicao(${el.id}, 'y', parseFloat(this.value)); this.parentElement.querySelector('b').textContent=this.value+'mm'" style="width:100%">
+                    <input type="number" value="${el.y.toFixed(1)}" step="0.5" style="margin-top:3px;padding:4px;font-size:11px" oninput="atualizarPosicao(${el.id}, 'y', parseFloat(this.value)||0)"></div>
+                </div>
+                <div class="row-inputs">
+                    <div class="form-group"><label>L (largura): <b>${el.w.toFixed(1)}mm</b></label>
+                    <input type="range" min="2" max="120" step="0.5" value="${el.w}" oninput="atualizarDimensoes(${el.id}, 'w', this.value); this.parentElement.querySelector('b').textContent=this.value+'mm'" style="width:100%">
+                    <input type="number" value="${el.w.toFixed(1)}" step="0.5" style="margin-top:3px;padding:4px;font-size:11px" oninput="atualizarDimensoes(${el.id}, 'w', this.value)"></div>
+                    <div class="form-group"><label>A (altura): <b>${el.h.toFixed(1)}mm</b></label>
+                    <input type="range" min="1" max="80" step="0.5" value="${el.h}" oninput="atualizarDimensoes(${el.id}, 'h', this.value); this.parentElement.querySelector('b').textContent=this.value+'mm'" style="width:100%">
+                    <input type="number" value="${el.h.toFixed(1)}" step="0.5" style="margin-top:3px;padding:4px;font-size:11px" oninput="atualizarDimensoes(${el.id}, 'h', this.value)"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:6px">
+                    <button onclick="moverElemento(${el.id}, -1, 0)" style="background:white;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:12px;cursor:pointer">⬅️ 0.5mm</button>
+                    <button onclick="moverElemento(${el.id}, 0, -1)" style="background:white;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:12px;cursor:pointer">⬆️ 0.5mm</button>
+                    <button onclick="moverElemento(${el.id}, 0, 1)" style="background:white;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:12px;cursor:pointer">⬇️ 0.5mm</button>
+                    <button onclick="moverElemento(${el.id}, 1, 0)" style="background:white;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:12px;cursor:pointer">➡️ 0.5mm</button>
+                    <button onclick="centralizarElementoX(${el.id})" style="background:#e0e7ff;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">↔️ Cent. X</button>
+                    <button onclick="centralizarElementoY(${el.id})" style="background:#e0e7ff;border:1px solid #6366f1;border-radius:4px;padding:4px;font-size:10px;cursor:pointer">↕️ Cent. Y</button>
+                </div>
+                <div style="display:flex;gap:4px;margin-top:4px">
+                    <button onclick="alinharElemento(${el.id}, 'left')" style="flex:1;background:white;border:1px solid #6366f1;border-radius:4px;padding:3px;font-size:9px">⬅️ Esq</button>
+                    <button onclick="alinharElemento(${el.id}, 'center')" style="flex:1;background:white;border:1px solid #6366f1;border-radius:4px;padding:3px;font-size:9px">↔️ Centro</button>
+                    <button onclick="alinharElemento(${el.id}, 'right')" style="flex:1;background:white;border:1px solid #6366f1;border-radius:4px;padding:3px;font-size:9px">➡️ Dir</button>
+                    <button onclick="alinharElemento(${el.id}, 'top')" style="flex:1;background:white;border:1px solid #6366f1;border-radius:4px;padding:3px;font-size:9px">⬆️ Topo</button>
+                </div>
+            </div>
+        `;
+        htmlCampos += posPanel;
+        const divBox=document.createElement('div'); divBox.className='elemento-box '+(el.campo?'vinculado':''); divBox.innerHTML=`<h4><span>${el.tipo.toUpperCase()} ${el.campo?'🔗 '+el.campo.toUpperCase():''} <small style="color:#6366f1">#${el.id}</small></span><button class="btn-remover" onclick="removerElemento(${el.id})">Remover</button></h4>${htmlCampos}`; container.appendChild(divBox);
     });
 }
 function carregarImagemLocal(id,event){ const arq=event.target.files[0]; if(arq){ const r=new FileReader(); r.onload=e=>{ atualizarDado(id,'valor',e.target.result); autoSalvar(); }; r.readAsDataURL(arq);} }
@@ -746,6 +738,13 @@ function adicionarElemento(){ abrirModalAdd(); }
 function removerElemento(id){ elementos=elementos.filter(e=>e.id!==id); renderizarTudo(); autoSalvar(); }
 function atualizarDado(id,campo,valor){ const el=elementos.find(e=>e.id===id); if(el){ el[campo]=valor; renderizarEtiqueta(); autoSalvar(); } }
 function atualizarDimensoes(id,campo,valor){ const el=elementos.find(e=>e.id===id); if(el){ el[campo]=parseFloat(valor)||0.5; renderizarEtiqueta(); autoSalvar(); } }
+
+function atualizarPosicao(id,campo,valor){ const el=elementos.find(e=>e.id===id); if(el){ el[campo]=parseFloat(valor)||0; renderizarEtiqueta(); autoSalvar(); } }
+function moverElemento(id, dx, dy){ const el=elementos.find(e=>e.id===id); if(el){ el.x+=dx*0.5; el.y+=dy*0.5; if(el.x<0) el.x=0; if(el.y<0) el.y=0; renderizarTudo(); autoSalvar(); } }
+function centralizarElementoX(id){ const el=elementos.find(e=>e.id===id); if(el){ const larguraMm=parseFloat(document.getElementById('inputWidth').value)||100; el.x=(larguraMm - el.w)/2; renderizarTudo(); autoSalvar(); } }
+function centralizarElementoY(id){ const el=elementos.find(e=>e.id===id); if(el){ const alturaMm=parseFloat(document.getElementById('inputHeight').value)||75; el.y=(alturaMm - el.h)/2; renderizarTudo(); autoSalvar(); } }
+function alinharElemento(id, pos){ const el=elementos.find(e=>e.id===id); if(!el) return; const larguraMm=parseFloat(document.getElementById('inputWidth').value)||100; const alturaMm=parseFloat(document.getElementById('inputHeight').value)||75; if(pos==='left') el.x=2; else if(pos==='right') el.x=larguraMm - el.w -2; else if(pos==='center') el.x=(larguraMm - el.w)/2; else if(pos==='top') el.y=1; else if(pos==='bottom') el.y=alturaMm - el.h -1; renderizarTudo(); autoSalvar(); }
+
 function centralizarElementos(){ let y=3; elementos.forEach(el=>{ el.x=5; el.y=y; y+=el.h+2; }); renderizarTudo(); autoSalvar(); }
 function renderizarEtiqueta(){
     const larguraMm=parseFloat(document.getElementById('inputWidth').value)||100; const alturaMm=parseFloat(document.getElementById('inputHeight').value)||75; const etiqueta=document.getElementById('etiqueta'); etiqueta.style.width=mmParaPx(larguraMm)+'px'; etiqueta.style.height=mmParaPx(alturaMm)+'px'; etiqueta.innerHTML='';
@@ -818,7 +817,38 @@ function renderizarEtiqueta(){
                 },0);
             } 
         }
-        else if(el.tipo==='ean13'){ if(el.valor){ const eanDiv=document.createElement('div'); eanDiv.className='preview-ean13'; const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.style.width='100%'; svg.style.height='100%'; eanDiv.appendChild(svg); itemDiv.appendChild(eanDiv); setTimeout(()=>{ try{ JsBarcode(svg, el.valor, {format:"EAN13", displayValue:true, fontSize:el.tamTexto||9, textMargin:el.eanEspaco!==undefined?el.eanEspaco:2, margin:0, width:el.eanLargura||1.5, height:40, background:"#ffffff"});}catch(err){ svg.innerHTML=`<text x="5" y="15" font-size="10" fill="red">EAN inválido</text>`; } },0); } }
+        else if(el.tipo==='ean13'){ 
+            if(el.valor){ 
+                const eanDiv=document.createElement('div'); 
+                eanDiv.className='preview-ean13'; 
+                eanDiv.style.background=el.corFundo||'#ffffff';
+                eanDiv.style.display='flex'; eanDiv.style.flexDirection='column'; eanDiv.style.justifyContent='center'; eanDiv.style.alignItems='stretch';
+                eanDiv.style.padding=(el.margemBarcode!==undefined?el.margemBarcode:4)+'px';
+                const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); 
+                svg.style.width='100%'; svg.style.flex='1'; svg.style.minHeight='10px';
+                eanDiv.appendChild(svg);
+                itemDiv.appendChild(eanDiv); 
+                setTimeout(()=>{ 
+                    try{ 
+                        let eanClean = (el.valor||'').replace(/[^0-9]/g,'');
+                        if(eanClean.length!==13) throw new Error('EAN 13 dígitos');
+                        JsBarcode(svg, eanClean, {
+                            format:"EAN13", 
+                            displayValue: el.mostrarTexto!==false, 
+                            fontSize: el.tamTexto||10, 
+                            textMargin: el.eanEspaco!==undefined?el.eanEspaco:3, 
+                            margin:0, 
+                            width: el.eanLargura||1.8, 
+                            height: el.alturaBarra||48, 
+                            background: el.corFundo||"#ffffff",
+                            lineColor: el.corBarras||"#000000",
+                            font: el.fonteTexto==='OCR-B' ? 'OCR-B' : (el.fonteTexto||'monospace'),
+                            fontOptions: el.negritoTexto ? 'bold' : ''
+                        });
+                    }catch(err){ svg.innerHTML=`<text x="50%" y="50%" text-anchor="middle" font-size="11" fill="red">${err.message}</text>`; } 
+                },0); 
+            } 
+        }
         else if(el.tipo==='linha'){ 
             const linhaDiv=document.createElement('div'); 
             linhaDiv.className='preview-linha'; 
@@ -830,15 +860,14 @@ function renderizarEtiqueta(){
             li.className='linha-interna'; 
             li.style.backgroundColor=cor;
             if(el.orientacao==='vertical'){ li.style.width=esp+'px'; li.style.height='100%'; li.style.borderLeft = esp+'px '+estilo+' '+cor; li.style.background='transparent'; } 
-            else if(el.orientacao==='diagonal'){ li.style.width='100%'; li.style.height='2px'; li.style.background=cor; li.style.transform='rotate(35deg)'; li.style.transformOrigin='center'; }
+            else if(el.orientacao==='diagonal'){ li.style.width='100%'; li.style.height='2px'; li.style.background=cor; li.style.transform='rotate(35deg)'; }
             else { li.style.width='100%'; li.style.height=esp+'px'; li.style.borderTop = esp+'px '+estilo+' '+cor; li.style.background='transparent'; } 
-            if(estilo==='dashed' || estilo==='dotted' || estilo==='double'){ li.style.background='transparent'; }
             linhaDiv.appendChild(li); itemDiv.appendChild(linhaDiv); 
         }
         else if(el.tipo==='quadrado'){
             const quadDiv=document.createElement('div');
             quadDiv.className='preview-linha';
-            quadDiv.style.width='100%'; quadDiv.style.height='100%'; quadDiv.style.display='flex'; quadDiv.style.alignItems='center'; quadDiv.style.justifyContent='center';
+            quadDiv.style.width='100%'; quadDiv.style.height='100%'; quadDiv.style.display='flex';
             const box=document.createElement('div');
             box.style.width='100%'; box.style.height='100%';
             box.style.borderStyle=el.bordaEstilo||'solid';
@@ -846,15 +875,9 @@ function renderizarEtiqueta(){
             box.style.borderColor=el.bordaCor||'#000000';
             box.style.borderRadius=(el.bordaRaio||0)+'px';
             box.style.boxSizing='border-box';
-            if(el.preenchimento==='color'){
-                box.style.backgroundColor=el.preenchimentoCor||'#ffffff';
-                box.style.backgroundImage='none';
-            } else if(el.preenchimento==='hachura'){
-                box.style.backgroundColor='transparent';
-                box.style.backgroundImage='repeating-linear-gradient(45deg, '+(el.bordaCor||'#000')+' 0px, '+(el.bordaCor||'#000')+' 1px, transparent 1px, transparent 6px)';
-            } else {
-                box.style.backgroundColor='transparent';
-            }
+            if(el.preenchimento==='color'){ box.style.backgroundColor=el.preenchimentoCor||'#ffffff'; }
+            else if(el.preenchimento==='hachura'){ box.style.backgroundImage='repeating-linear-gradient(45deg, '+(el.bordaCor||'#000')+' 0 1px, transparent 1px 6px)'; }
+            else { box.style.backgroundColor='transparent'; }
             quadDiv.appendChild(box);
             itemDiv.appendChild(quadDiv);
         }
