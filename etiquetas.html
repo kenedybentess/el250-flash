@@ -77,15 +77,19 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 .config-flutuante-header{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px 16px;font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none;touch-action:none}
 .config-flutuante-header:active{cursor:grabbing}
 .config-flutuante-box.arrastando{opacity:0.9;box-shadow:0 25px 60px rgba(0,0,0,0.45);transition:none}
-.config-flutuante-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:10001;display:none}
-.config-flutuante-overlay.ativo{display:block}
 .config-flutuante-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%)}
 .config-flutuante-box.posicionado{transform:none}
-
+.config-flutuante-overlay{background:rgba(0,0,0,0.25)}
 .config-flutuante-body{padding:14px;overflow-y:auto;flex:1;background:#f9fafb}
 .config-flutuante-footer{display:flex;gap:8px;padding:10px 14px;background:#f3f4f6;border-top:1px solid #e5e7eb}
 .etiqueta-item-preview.selecionado{border:2px solid #6366f1 !important;box-shadow:0 0 0 3px rgba(99,102,241,0.3);z-index:10}
 .etiqueta-item-preview:hover{border-color:#8b5cf6 !important;background-color:rgba(139,92,246,0.08) !important}
+
+
+.padrao-linhas-box{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:2px solid #f97316;border-radius:10px;padding:10px;margin-bottom:12px}
+.padrao-linhas-box h3{font-size:11px;color:#c2410c;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.espessura-chip{display:inline-block;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:bold;margin:2px;cursor:pointer;border:1px solid #ddd}
+.espessura-chip.ativo{background:#f97316;color:white;border-color:#f97316}
 
 </style>
 </head>
@@ -109,12 +113,11 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 <div class="config-flutuante-overlay" id="modalConfigFlutuante" onclick="if(event.target===this) fecharConfigFlutuante()">
     <div class="config-flutuante-box" id="boxConfigFlutuante">
         <div class="config-flutuante-header" id="headerFlutuante" onmousedown="iniciarArrasteFlutuante(event)" ontouchstart="iniciarArrasteFlutuante(event)">
-            <span style="display:flex;align-items:center;gap:6px"><span style="cursor:move">⠿</span><span id="tituloConfigFlutuante">⚙️ Configurar Elemento</span><small style="font-weight:normal;opacity:0.8;font-size:10px">↔ arraste para posicionar</small></span>
+            <span id="tituloConfigFlutuante">⚙️ Configurar Elemento</span>
             <div style="display:flex;gap:6px;align-items:center">
-                <button onclick="event.stopPropagation(); resetarPosicaoFlutuante()" title="Centralizar tela" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">📍 Centro</button>
-                <button onclick="event.stopPropagation(); centralizarElementoX(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↔️ Cent. X</button>
-                <button onclick="event.stopPropagation(); centralizarElementoY(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↕️ Cent. Y</button>
-                <span style="cursor:pointer;font-size:18px;padding:4px" onclick="event.stopPropagation(); fecharConfigFlutuante()">✕</span>
+                <button onclick="centralizarElementoX(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↔️ Cent. X</button>
+                <button onclick="centralizarElementoY(window._configId); atualizarFlutuante()" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer">↕️ Cent. Y</button>
+                <span style="cursor:pointer;font-size:18px" onclick="fecharConfigFlutuante()">✕</span>
             </div>
         </div>
         <div class="config-flutuante-body" id="bodyConfigFlutuante"></div>
@@ -176,6 +179,34 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
     <div class="row-inputs">
         <div class="form-group"><label>Largura (mm):</label><input type="number" id="inputWidth" value="100" oninput="renderizarEtiqueta(); autoSalvar()"></div>
         <div class="form-group"><label>Altura (mm):</label><input type="number" id="inputHeight" value="75" oninput="renderizarEtiqueta(); autoSalvar()"></div>
+    </div>
+
+    <h2 style="border-color:#f97316;color:#ea580c">📏 PADRÃO DE ESPESSURA - LINHAS</h2>
+    <div class="padrao-linhas-box" id="boxPadraoLinhas">
+        <h3><span>➖ LINHAS</span><span id="contadorLinhas" style="background:#f97316;color:white;padding:2px 6px;border-radius:10px;font-size:9px">0 linhas</span></h3>
+        <div class="form-group"><label>🎯 Espessura padrão (mm):</label>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+                <span class="espessura-chip" onclick="definirPadraoLinha(0.3)" data-esp="0.3">Fina 0.3</span>
+                <span class="espessura-chip ativo" onclick="definirPadraoLinha(0.8)" data-esp="0.8">Padrão 0.8</span>
+                <span class="espessura-chip" onclick="definirPadraoLinha(1.2)" data-esp="1.2">Média 1.2</span>
+                <span class="espessura-chip" onclick="definirPadraoLinha(2)" data-esp="2">Grossa 2.0</span>
+                <span class="espessura-chip" onclick="definirPadraoLinha(3)" data-esp="3">Extra 3.0</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+                <input type="range" id="inputPadraoEspessura" min="0.2" max="5" step="0.1" value="0.8" style="flex:1" oninput="document.getElementById('valorPadraoEsp').textContent=this.value+'mm'; definirPadraoLinha(parseFloat(this.value), false)">
+                <span id="valorPadraoEsp" style="font-weight:bold;color:#c2410c;min-width:45px">0.8mm</span>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+            <button class="btn-add" style="background:#f97316;margin:0;font-size:11px;padding:8px" onclick="aplicarPadraoTodasLinhas()">📏 Aplicar em TODAS</button>
+            <button class="btn-add" style="background:#fb923c;margin:0;font-size:11px;padding:8px" onclick="normalizarLinhas()">⚖️ Normalizar</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn-add" style="background:#fff;color:#c2410c;border:1px solid #f97316;margin:0;font-size:10px;padding:6px" onclick="verificarLinhasForaPadrao()">🔍 Verificar fora padrão</button>
+            <button class="btn-add" style="background:#fff;color:#c2410c;border:1px solid #f97316;margin:0;font-size:10px;padding:6px" onclick="adicionarLinhaPadrao()">➕ Linha padrão</button>
+        </div>
+        <div id="listaLinhasPadrao" style="margin-top:8px;max-height:100px;overflow-y:auto;font-size:10px"></div>
+        <div style="font-size:9px;color:#9a3412;margin-top:6px">💡 Dica: Defina a espessura e clique em Aplicar para deixar todas as linhas no mesmo padrão.</div>
     </div>
 
     <h2>Elementos - VINCULADOS</h2>
@@ -505,7 +536,7 @@ function fecharModalAdd(){ document.getElementById('modalAddElemento').classList
 function confirmarAddElemento(){
     const tipo=document.getElementById('selectTipoElemento').value;
     fecharModalAdd();
-    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:(tipo==='quadrado'?40:90)))));
+    let novoW=tipo==='imagem'?30:(tipo==='barcode'?80:(tipo==='ean13'?70:(tipo==='barcode_uniao'?95:(tipo==='data'?35:(tipo==='quadrado'?40:(tipo==='linha'?90:90))))));
     let novoH=tipo==='imagem'?20:(tipo==='barcode'?16:(tipo==='ean13'?20:(tipo==='barcode_uniao'?22:(tipo==='data'?8:(tipo==='quadrado'?25:6)))));
     let valorPadrao=''; let campoPadrao='';
     if(tipo==='texto') valorPadrao='Novo Texto';
@@ -514,7 +545,8 @@ function confirmarAddElemento(){
     else if(tipo==='barcode_uniao') { valorPadrao = gerarValorUniao('ESPEC_FOTO'); campoPadrao='uniao'; }
     else if(tipo==='data') { valorPadrao = gerarDataAtual('DD/MM/AAAA'); campoPadrao='dataAtual'; }
     else if(tipo==='quadrado') { valorPadrao=''; campoPadrao=''; }
-    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha:1, distanciaTexto:2, eanEspaco:3, eanLargura:1.8, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:48, mostrarTexto:true, margemBarcode:4, alignTexto:'center', fonteTexto:'monospace', bordaEspessura:1.5, bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff', corFundo:'#ffffff', corBarras:'#000000', negritoTexto:false});
+    let espPadrao = (typeof _padraoEspessuraLinha !== 'undefined' ? _padraoEspessuraLinha : 0.8);
+    elementos.push({id:idContador++, tipo:tipo, valor:valorPadrao, x:5, y:35, w:novoW, h:novoH, tamFonte:10, negrito:false, tamTexto:10, campo:campoPadrao, orientacao:'horizontal', espessuraLinha: (tipo==='linha'?espPadrao:1), distanciaTexto:2, eanEspaco:3, eanLargura:1.8, formatoBarcode:'CODE128', templateUniao:'ESPEC_FOTO', formatoData:'DD/MM/AAAA', alturaBarra:48, mostrarTexto:true, margemBarcode:4, alignTexto:'center', fonteTexto:'monospace', bordaEspessura: (tipo==='quadrado'?espPadrao:1.5), bordaCor:'#000000', bordaEstilo:'solid', bordaRaio:2, preenchimento:'transparent', preenchimentoCor:'#ffffff', corFundo:'#ffffff', corBarras:'#000000', negritoTexto:false});
     renderizarTudo(); autoSalvar();
     setTimeout(()=>{ abrirConfigFlutuante(idContador-1); }, 300);
 }
@@ -678,13 +710,97 @@ function gerarHtmlCampos(el){
 }
 
 // ---- Tela flutuante ----
+
+// ==== MODO PADRÃO DE ESPESSURA PARA LINHAS ====
+let _padraoEspessuraLinha = parseFloat(localStorage.getItem('padrao_espessura_linha')||'0.8');
+
+function definirPadraoLinha(valor, salvar=true){
+    _padraoEspessuraLinha = parseFloat(valor)||0.8;
+    const input = document.getElementById('inputPadraoEspessura');
+    const label = document.getElementById('valorPadraoEsp');
+    if(input) input.value = _padraoEspessuraLinha;
+    if(label) label.textContent = _padraoEspessuraLinha.toFixed(1)+'mm';
+    // Atualiza chips
+    document.querySelectorAll('.espessura-chip').forEach(chip=>{
+        const esp = parseFloat(chip.getAttribute('data-esp'));
+        if(Math.abs(esp - _padraoEspessuraLinha) < 0.15) chip.classList.add('ativo');
+        else chip.classList.remove('ativo');
+    });
+    if(salvar){
+        try{ localStorage.setItem('padrao_espessura_linha', _padraoEspessuraLinha); }catch{}
+        atualizarListaLinhasPadrao();
+    }
+}
+function aplicarPadraoTodasLinhas(){
+    const linhas = elementos.filter(e=>e.tipo==='linha' || e.tipo==='quadrado');
+    if(linhas.length===0){ alert('Nenhuma linha ou quadrado encontrado na etiqueta.'); return; }
+    if(!confirm(`Aplicar espessura padrão de ${_padraoEspessuraLinha}mm em ${linhas.length} linha(s)/quadrado(s)?`)) return;
+    linhas.forEach(el=>{
+        if(el.tipo==='linha') el.espessuraLinha = _padraoEspessuraLinha;
+        else if(el.tipo==='quadrado') el.bordaEspessura = _padraoEspessuraLinha;
+    });
+    renderizarTudo();
+    atualizarListaLinhasPadrao();
+    autoSalvar();
+    if(window._configId) atualizarFlutuante();
+    document.getElementById('statusSave').innerText = `✅ ${linhas.length} linhas padronizadas para ${_padraoEspessuraLinha}mm`;
+}
+function normalizarLinhas(){
+    const linhas = elementos.filter(e=>e.tipo==='linha');
+    if(linhas.length<=1){ alert('Precisa de pelo menos 2 linhas para normalizar.'); return; }
+    // Pega a espessura mais comum (moda)
+    const contagem = {};
+    linhas.forEach(el=>{ const k = (el.espessuraLinha||0.8).toFixed(1); contagem[k]=(contagem[k]||0)+1; });
+    let moda = _padraoEspessuraLinha.toFixed(1);
+    let maxCount=0;
+    for(let k in contagem){ if(contagem[k]>maxCount){ maxCount=contagem[k]; moda=k; } }
+    definirPadraoLinha(parseFloat(moda));
+    aplicarPadraoTodasLinhas();
+}
+function verificarLinhasForaPadrao(){
+    const fora = elementos.filter(e=> e.tipo==='linha' && Math.abs((e.espessuraLinha||0.8) - _padraoEspessuraLinha) > 0.1);
+    if(fora.length===0){ alert(`✅ Todas as ${elementos.filter(e=>e.tipo==='linha').length} linhas estão no padrão ${_padraoEspessuraLinha}mm`); }
+    else {
+        alert(`⚠️ ${fora.length} linha(s) fora do padrão ${_padraoEspessuraLinha}mm:\n` + fora.map(e=>`#${e.id} - ${e.espessuraLinha}mm em X:${e.x.toFixed(1)} Y:${e.y.toFixed(1)}`).join('\n'));
+        // Destaca no preview
+        document.querySelectorAll('.etiqueta-item-preview').forEach(div=>{
+            const id=parseInt(div.getAttribute('data-id'));
+            if(fora.some(f=>f.id===id)) div.style.boxShadow='0 0 0 3px #f97316';
+        });
+        setTimeout(()=>{ renderizarEtiqueta(); }, 3000);
+    }
+    atualizarListaLinhasPadrao();
+}
+function adicionarLinhaPadrao(){
+    elementos.push({id:idContador++, tipo:'linha', valor:'', x:5, y:20, w:90, h:0.8, orientacao:'horizontal', espessuraLinha:_padraoEspessuraLinha, bordaCor:'#000000', bordaEstilo:'solid'});
+    renderizarTudo(); autoSalvar();
+}
+function atualizarListaLinhasPadrao(){
+    const cont = document.getElementById('contadorLinhas');
+    const lista = document.getElementById('listaLinhasPadrao');
+    if(!cont || !lista) return;
+    const linhas = elementos.filter(e=>e.tipo==='linha' || e.tipo==='quadrado');
+    cont.textContent = `${linhas.length} ${linhas.length===1?'linha':'linhas'}`;
+    if(linhas.length===0){ lista.innerHTML='<div style="color:#999;text-align:center;padding:4px">Nenhuma linha</div>'; return; }
+    lista.innerHTML = linhas.map(el=>{
+        const isFora = el.tipo==='linha' ? Math.abs((el.espessuraLinha||0.8) - _padraoEspessuraLinha) > 0.1 : Math.abs((el.bordaEspessura||1.5) - _padraoEspessuraLinha) > 0.1;
+        const esp = el.tipo==='linha' ? (el.espessuraLinha||0.8) : (el.bordaEspessura||1.5);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 4px;background:${isFora?'#ffedd5':'white'};border:1px solid ${isFora?'#f97316':'#eee'};border-radius:4px;margin-bottom:2px;cursor:pointer" onclick="abrirConfigFlutuante(${el.id})">
+            <span><b>#${el.id}</b> ${el.tipo==='linha'?'➖':'⬜'} ${esp.toFixed(1)}mm ${isFora?'⚠️':''}</span>
+            <span style="font-size:9px;color:#666">X:${el.x.toFixed(0)} Y:${el.y.toFixed(0)}</span>
+        </div>`;
+    }).join('');
+}
+
+// Inicializa padrão ao carregar
+setTimeout(()=>{ definirPadraoLinha(_padraoEspessuraLinha, false); atualizarListaLinhasPadrao(); }, 500);
+
+// ==== DRAGGABLE FLUTUANTE ====
 let _flutuantePos = {x:null, y:null, isPosicionado:false};
 let _dragFlutuante = {ativo:false, offsetX:0, offsetY:0};
-
 function iniciarArrasteFlutuante(e){
     const box = document.getElementById('boxConfigFlutuante');
     if(!box) return;
-    // Não arrastar se clicou em botão
     if(e.target.tagName==='BUTTON' || e.target.closest('button')) return;
     e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -716,7 +832,6 @@ function moverFlutuante(e){
     box.style.top = y + 'px';
     box.style.transform = 'none';
     _flutuantePos = {x, y, isPosicionado:true};
-    // Salva posição no localStorage
     try{ localStorage.setItem('flutuante_pos', JSON.stringify(_flutuantePos)); }catch{}
 }
 function pararArrasteFlutuante(){
@@ -740,6 +855,7 @@ function resetarPosicaoFlutuante(){
     try{ localStorage.removeItem('flutuante_pos'); }catch{}
 }
 
+
 function abrirConfigFlutuante(id){
     const el = elementos.find(e=>e.id===id);
     if(!el) return;
@@ -752,7 +868,6 @@ function abrirConfigFlutuante(id){
     const overlay = document.getElementById('modalConfigFlutuante');
     overlay.classList.add('ativo');
     const box = document.getElementById('boxConfigFlutuante');
-    // Restaura posição salva ou centraliza
     try{
         const saved = JSON.parse(localStorage.getItem('flutuante_pos')||'null');
         if(saved && saved.isPosicionado && saved.x!=null){
@@ -933,7 +1048,7 @@ function renderizarEtiqueta(){
     ativarArrasto();
 }
 function ativarArrasto(){ try{ if(typeof interact==='undefined') return; interact('.etiqueta-item-preview').draggable({ inertia:true, modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:true})], listeners:{ move(event){ const target=event.target; const id=parseInt(target.getAttribute('data-id')); const elData=elementos.find(e=>e.id===id); if(elData){ elData.x+=pxParaMm(event.dx); elData.y+=pxParaMm(event.dy); target.style.left=mmParaPx(elData.x)+'px'; target.style.top=mmParaPx(elData.y)+'px'; if(window._configId===id) atualizarTituloFlutuante(); } }, end(){ autoSalvar(); if(window._configId!=null) { inicializarFormulario(); atualizarTituloFlutuante(); } } } }); }catch(e){ console.log('interact erro', e); } }
-function renderizarTudo(){ inicializarFormulario(); renderizarEtiqueta(); }
+function renderizarTudo(){ inicializarFormulario(); renderizarEtiqueta(); try{ atualizarListaLinhasPadrao(); }catch{} }
 function toggleMenuSuspenso(){ const dd=document.getElementById('menuDropdown'); const btn=document.getElementById('btnMenuSuspenso'); if(!dd) return; dd.classList.toggle('ativo'); if(btn) btn.textContent = dd.classList.contains('ativo') ? '✕' : '☰'; }
 document.addEventListener('click', function(e){ const menu=document.querySelector('.menu-suspenso'); if(menu && !menu.contains(e.target)){ const dd=document.getElementById('menuDropdown'); if(dd){ dd.classList.remove('ativo'); const b=document.getElementById('btnMenuSuspenso'); if(b) b.textContent='☰'; } } });
 
