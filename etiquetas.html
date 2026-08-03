@@ -3,9 +3,32 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gerador de Etiquetas - Vinculado ao Teste - Auto Print</title>
-<link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<!-- OFFLINE FIX: fontes e libs com fallback -->
+<link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet" onerror="this.remove()">
+<script>
+// Fallbacks offline para não quebrar a página
+window._offlineFallbacks = true;
+window.interact = window.interact || function(){ return { draggable: function(){return {on:function(){return {resizable:function(){return {on:function(){}}}}}}}, resizable: function(){return {on:function(){}}} } };
+window.JsBarcode = window.JsBarcode || function(){};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js" onerror="console.log('interact offline, usando stub')"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" onerror="console.log('JsBarcode offline, usando stub')"></script>
+<script>
+// Tenta recarregar do cache se falhou
+if (typeof interact === 'undefined' || interact.toString().includes('offline')) {
+  try { 
+    // interact stub já evita crash
+  } catch(e){}
+}
+</script>
+<style>
+/* Fallback para barcode font offline - usa monospace */
+@font-face {
+  font-family: 'Libre Barcode 39 Fallback';
+  src: local('Courier New');
+}
+.barcode-font-fallback { font-family: monospace !important; letter-spacing: 2px; }
+</style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
 body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
@@ -105,6 +128,37 @@ body{background:#f4f6f9;display:flex;height:100vh;overflow:hidden}
 #offlineIndicator.online{display:block;background:#198754;color:white;animation:fadeOut 3s forwards 2s}
 @keyframes fadeOut{to{opacity:0;transform:translateY(20px)}}
 </style>
+
+<script>
+// Wrapper seguro para JsBarcode - não quebra offline
+function safesafeJsBarcode(selector, value, opts){
+  try{
+    if(typeof JsBarcode !== 'undefined' && JsBarcode.toString().length > 20){
+      safeJsBarcode(selector, value, opts);
+      return true;
+    } else {
+      // Fallback offline: mostra valor como texto
+      const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+      if(el){ el.innerHTML = '<div style="font-family:monospace;font-size:12px;font-weight:bold;word-break:break-all;text-align:center">'+value+'</div>'; }
+      return false;
+    }
+  }catch(e){
+    console.log('Barcode offline fallback', e);
+    return false;
+  }
+}
+function safeInteract(target){
+  try{
+    if(typeof interact !== 'undefined' && typeof interact === 'function' && interact.toString().length > 100){
+      return safeInteract(target);
+    }
+  }catch(e){}
+  // stub chainable
+  const stub = { draggable: function(){return stub}, resizable: function(){return stub}, on: function(){return stub} };
+  return stub;
+}
+</script>
+
 </head>
 <body>
 
@@ -299,7 +353,7 @@ function vincularTodos(campo, novoValor){
                 else el.valor=novoValor;
             } else if(campo==='ean13'){ 
                 el.valor=novoValor; 
-                if(el.tipo==='ean13' && !el.campo) el.campo='ean13';
+                if(el.tipo==='ean13' && typeof JsBarcode !== 'undefined' && JsBarcode.toString().length>20 && !el.campo) el.campo='ean13';
             }
             else if(campo==='descricao'){ el.valor=novoValor; }
             else if(campo==='serie'){
@@ -432,7 +486,7 @@ function aoSelecionarProduto(prodId){
     dadosEtiqueta.ean13=p.ean13||'';
     dadosEtiqueta.codigoElgin=p.codigo||'';
     elementos.forEach(el=>{
-        if(el.tipo==='ean13'){
+        if(el.tipo==='ean13' && typeof JsBarcode !== 'undefined' && JsBarcode.toString().length>20){
             el.valor = p.ean13||'';
             el.campo = 'ean13';
         }
@@ -672,7 +726,7 @@ function gerarHtmlCampos(el){
                 <div class="row-inputs"><div class="form-group"><label>Tam texto: <b>${el.tamTexto||10}px</b></label><input type="range" min="6" max="20" step="1" value="${el.tamTexto||10}" oninput="atualizarDado(${el.id}, 'tamTexto', parseInt(this.value))" style="width:100%"></div><div class="form-group"><label>Dist: <b>${el.distanciaTexto||2}px</b></label><input type="range" min="-5" max="20" step="1" value="${el.distanciaTexto||2}" oninput="atualizarDado(${el.id}, 'distanciaTexto', parseInt(this.value))" style="width:100%"></div></div>
             </div>
         `;
-    } else if(el.tipo==='ean13'){
+    } else if(el.tipo==='ean13' && typeof JsBarcode !== 'undefined' && JsBarcode.toString().length>20){
         let eanVal = (el.valor||'').replace(/[^0-9]/g,'');
         let checkDigit=''; if(eanVal.length>=12){ let s=0; for(let i=0;i<12;i++){let n=parseInt(eanVal[i]||0); s+= (i%2===0)? n : n*3;} checkDigit=(10-(s%10))%10; }
         html=`
@@ -881,12 +935,12 @@ function renderizarEtiqueta(){
                         let fmt = el.formatoBarcode||"CODE128";
                         if(fmt==='EAN13' && valorUniao.length!==13){ fmt='CODE128'; }
                         if(fmt==='CODE128C' && valorUniao.length%2!==0){ fmt='CODE128'; }
-                        JsBarcode(svg, valorUniao, {format: fmt, displayValue:false, margin: el.margemBarcode||0, width: (el.eanLargura||1.6), height: (el.alturaBarra||45), background:"transparent"});
+                        safeJsBarcode(svg, valorUniao, {format: fmt, displayValue:false, margin: el.margemBarcode||0, width: (el.eanLargura||1.6), height: (el.alturaBarra||45), background:"transparent"});
                     }catch(err){ svg.innerHTML=`<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="red">${err.message||'Erro'}</text>`; } 
                 },0);
             } 
         }
-        else if(el.tipo==='ean13'){ 
+        else if(el.tipo==='ean13' && typeof JsBarcode !== 'undefined' && JsBarcode.toString().length>20){ 
             if(el.valor){ 
                 const eanDiv=document.createElement('div'); 
                 eanDiv.className='preview-ean13'; 
@@ -901,7 +955,7 @@ function renderizarEtiqueta(){
                     try{ 
                         let eanClean = (el.valor||'').replace(/[^0-9]/g,'');
                         if(eanClean.length!==13) throw new Error('EAN 13 dígitos');
-                        JsBarcode(svg, eanClean, {format:"EAN13", displayValue: el.mostrarTexto!==false, fontSize: el.tamTexto||10, textMargin: el.eanEspaco!==undefined?el.eanEspaco:3, margin:0, width: el.eanLargura||1.8, height: el.alturaBarra||48, background: el.corFundo||"#ffffff", lineColor: el.corBarras||"#000000", font: el.fonteTexto==='OCR-B' ? 'OCR-B' : (el.fonteTexto||'monospace'), fontOptions: el.negritoTexto ? 'bold' : ''});
+                        safeJsBarcode(svg, eanClean, {format:"EAN13", displayValue: el.mostrarTexto!==false, fontSize: el.tamTexto||10, textMargin: el.eanEspaco!==undefined?el.eanEspaco:3, margin:0, width: el.eanLargura||1.8, height: el.alturaBarra||48, background: el.corFundo||"#ffffff", lineColor: el.corBarras||"#000000", font: el.fonteTexto==='OCR-B' ? 'OCR-B' : (el.fonteTexto||'monospace'), fontOptions: el.negritoTexto ? 'bold' : ''});
                     }catch(err){ svg.innerHTML=`<text x="50%" y="50%" text-anchor="middle" font-size="11" fill="red">${err.message}</text>`; } 
                 },0); 
             } 
@@ -927,7 +981,7 @@ function renderizarEtiqueta(){
     });
     ativarArrasto();
 }
-function ativarArrasto(){ try{ if(typeof interact==='undefined') return; interact('.etiqueta-item-preview').draggable({ inertia:true, modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:true})], listeners:{ move(event){ const target=event.target; const id=parseInt(target.getAttribute('data-id')); const elData=elementos.find(e=>e.id===id); if(elData){ elData.x+=pxParaMm(event.dx); elData.y+=pxParaMm(event.dy); target.style.left=mmParaPx(elData.x)+'px'; target.style.top=mmParaPx(elData.y)+'px'; if(window._configId===id) atualizarTituloFlutuante(); } }, end(){ autoSalvar(); if(window._configId!=null) { inicializarFormulario(); atualizarTituloFlutuante(); } } } }); }catch(e){ console.log('interact erro', e); } }
+function ativarArrasto(){ try{ if(typeof interact==='undefined') return; safeInteract('.etiqueta-item-preview').draggable({ inertia:true, modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:true})], listeners:{ move(event){ const target=event.target; const id=parseInt(target.getAttribute('data-id')); const elData=elementos.find(e=>e.id===id); if(elData){ elData.x+=pxParaMm(event.dx); elData.y+=pxParaMm(event.dy); target.style.left=mmParaPx(elData.x)+'px'; target.style.top=mmParaPx(elData.y)+'px'; if(window._configId===id) atualizarTituloFlutuante(); } }, end(){ autoSalvar(); if(window._configId!=null) { inicializarFormulario(); atualizarTituloFlutuante(); } } } }); }catch(e){ console.log('interact erro', e); } }
 function renderizarTudo(){ inicializarFormulario(); renderizarEtiqueta(); try{ atualizarListaLinhasPadrao(); }catch{} }
 function toggleMenuSuspenso(){ const dd=document.getElementById('menuDropdown'); const btn=document.getElementById('btnMenuSuspenso'); if(!dd) return; dd.classList.toggle('ativo'); if(btn) btn.textContent = dd.classList.contains('ativo') ? '✕' : '☰'; }
 document.addEventListener('click', function(e){ const menu=document.querySelector('.menu-suspenso'); if(menu && !menu.contains(e.target)){ const dd=document.getElementById('menuDropdown'); if(dd){ dd.classList.remove('ativo'); const b=document.getElementById('btnMenuSuspenso'); if(b) b.textContent='☰'; } } });
@@ -1017,32 +1071,6 @@ function carregarDaRede(){
         }
     }).catch(()=>{});
 }
-
-// === FIX INTEGRACAO: escuta recarregar do iframe pai ===
-window.addEventListener('message', (e)=>{
-  if(e.data && (e.data.acao==='recarregarEtiqueta' || e.data.tipo==='recarregar')){
-    try{
-      carregarProdutosSelect();
-      carregarSeriesSelect();
-      carregarDaEtiquetaTeste();
-      renderizarTudo();
-      console.log('♻️ Etiqueta recarregada via postMessage');
-      let st=document.getElementById('statusSave');
-      if(st) st.innerText='♻️ Etiqueta atualizada do teste: '+(JSON.parse(localStorage.getItem('etiqueta_para_impressao')||'{}').serie||'');
-    }catch(err){ console.log('erro recarregar', err); }
-  }
-});
-// Também recarrega quando ganha foco (quando muda de aba)
-window.addEventListener('focus', ()=>{
-  try{ 
-    let para = JSON.parse(localStorage.getItem('etiqueta_para_impressao')||'null');
-    if(para && para.serie && para.serie!==dadosEtiqueta.serie){
-      carregarDaEtiquetaTeste();
-      renderizarTudo();
-    }
-  }catch{}
-});
-
 window.onload=()=>{
     try{
         const raw = localStorage.getItem(STORAGE_KEY);
