@@ -27,64 +27,7 @@
 <div id="detalhe" class="card mt-4" style="display:none;"><div class="card-header">Detalhe do Log</div><div class="card-body"><pre id="preDetalhe" style="font-size:12px;"></pre></div></div>
 </div>
 <script>
-
-function gerarNomeArquivo(log,ext){
-  try{
-    let d = log.data ? new Date(log.data) : new Date();
-    if(log.fim_br && log.fim_br.includes('/')){
-      try{
-        let parts = log.fim_br.split(' ');
-        let datePart = parts[0].split('/');
-        let timePart = (parts[1]||'00:00:00').split(':');
-        d = new Date(datePart[2], datePart[1]-1, datePart[0], timePart[0]||0, timePart[1]||0, timePart[2]||0);
-      }catch{}
-    }
-    const pad = n => String(n).padStart(2,'0');
-    const dateStr = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-    const timeStr = `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    const codigo = (log.produto||'PRODUTO').toString().toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const modelo = (log.modelo||'FLASH_II').toString().toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'_');
-    const serie = (log.serie||'00000000').toString().toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const resultado = (log.resultado||'APROVADO').toString().toUpperCase();
-    return `LOG-${dateStr}-${timeStr}_${codigo}_${modelo}_${serie}_${resultado}.${ext}`;
-  }catch(e){
-    return (log.log_id||'LOG')+'.'+ext;
-  }
-}
-function gerarConteudoTXT(log){
-  let linhas = [];
-  linhas.push('========================================');
-  linhas.push('   LOG DE EVIDENCIA - ELGIN FLASH II');
-  linhas.push('========================================');
-  linhas.push(`LOG ID: ${log.log_id}`);
-  linhas.push(`DATA INICIO: ${log.inicio_br}`);
-  linhas.push(`DATA FIM: ${log.fim_br}`);
-  linhas.push(`PRODUTO: ${log.produto}`);
-  linhas.push(`MODELO: ${log.modelo}`);
-  linhas.push(`SERIE: ${log.serie}`);
-  linhas.push(`OPERADOR: ${log.operador}`);
-  linhas.push(`RESULTADO: ${log.resultado}`);
-  linhas.push(`DURACAO: ${log.duracao_segundos}s`);
-  linhas.push(`HASH: ${log.hash}`);
-  linhas.push('----------------------------------------');
-  linhas.push('LEITURAS:');
-  Object.values(log.leituras||{}).forEach((l,i)=>{
-    linhas.push(`${i+1}. ${l.nome} | ESP: ${l.esperado} | LIDO: ${l.codigo} | ${l.correto?'OK':'ERRO'} | ${l.hora}`);
-  });
-  linhas.push('========================================');
-  return linhas.join('\n');
-}
-function baixarLog(log, ext){
-  let nome = gerarNomeArquivo(log, ext);
-  let conteudo = ext==='json' ? JSON.stringify(log,null,2) : gerarConteudoTXT(log);
-  let blob = new Blob([conteudo], {type: ext==='json' ? 'application/json' : 'text/plain'});
-  let a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nome;
-  a.click();
-}
-
-function carregar(){let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');document.getElementById('total').innerText=logs.length;let tbody=document.getElementById('tbody');tbody.innerHTML=logs.length===0?'<tr><td colspan=9 class="text-center">Nenhum log ainda</td></tr>':logs.map(l=>{let nome=gerarNomeArquivo(l,'json'); return `<tr><td><small>${l.log_id}</small><br><small class="text-muted" style="font-size:9px">${nome}</small></td><td>${l.fim_br}</td><td><b>${l.serie}</b></td><td>${l.operador}</td><td>${l.produto}</td><td>${l.duracao_segundos}s</td><td><span class="badge ${l.resultado==='APROVADO'?'bg-success':'bg-danger'}">${l.resultado}</span></td><td><small style="font-family:monospace;">${l.hash.slice(0,8)}...</small></td><td><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary" onclick="ver('${l.log_id}')" title="Ver"><i class="bi bi-eye"></i></button><button class="btn btn-outline-success" onclick="baixarLog(JSON.parse(localStorage.getItem('logs_evidencia')).find(x=>x.log_id==='${l.log_id}'),'json')" title="Baixar JSON"><i class="bi bi-filetype-json"></i></button><button class="btn btn-outline-dark" onclick="baixarLog(JSON.parse(localStorage.getItem('logs_evidencia')).find(x=>x.log_id==='${l.log_id}'),'txt')" title="Baixar TXT"><i class="bi bi-filetype-txt"></i></button></div></td></tr>`;}).join('');
+function carregar(){let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');document.getElementById('total').innerText=logs.length;let tbody=document.getElementById('tbody');tbody.innerHTML=logs.length===0?'<tr><td colspan=9 class="text-center">Nenhum log ainda</td></tr>':logs.map(l=>`<tr><td><small>${l.log_id}</small></td><td>${l.fim_br}</td><td><b>${l.serie}</b></td><td>${l.operador}</td><td>${l.produto}</td><td>${l.duracao_segundos}s</td><td><span class="badge ${l.resultado==='APROVADO'?'bg-success':'bg-danger'}">${l.resultado}</span></td><td><small style="font-family:monospace;">${l.hash.slice(0,8)}...</small></td><td><button class="btn btn-sm btn-primary" onclick="ver('${l.log_id}')"><i class="bi bi-eye"></i></button></td></tr>`).join('');}
 function ver(id){let logs=JSON.parse(localStorage.getItem('logs_evidencia'));let l=logs.find(x=>x.log_id===id);document.getElementById('detalhe').style.display='block';document.getElementById('preDetalhe').innerText=JSON.stringify(l,null,2);window.scrollTo(0,document.body.scrollHeight);}
 function exportCSV(){let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');let csv='LOG_ID;DATA_INICIO;DATA_FIM;SERIE;OPERADOR;PRODUTO;RESULTADO;DURACAO;HASH\n'+logs.map(l=>`${l.log_id};${l.inicio_br};${l.fim_br};${l.serie};${l.operador};${l.produto};${l.resultado};${l.duracao_segundos};${l.hash}`).join('\n');let blob=new Blob([csv],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='logs_evidencia_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
 function limpar(){if(confirm('Apagar todos os logs de evidência?')){localStorage.setItem('logs_evidencia',JSON.stringify([]));carregar();}}
