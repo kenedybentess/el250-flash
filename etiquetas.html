@@ -1017,6 +1017,32 @@ function carregarDaRede(){
         }
     }).catch(()=>{});
 }
+
+// === FIX INTEGRACAO: escuta recarregar do iframe pai ===
+window.addEventListener('message', (e)=>{
+  if(e.data && (e.data.acao==='recarregarEtiqueta' || e.data.tipo==='recarregar')){
+    try{
+      carregarProdutosSelect();
+      carregarSeriesSelect();
+      carregarDaEtiquetaTeste();
+      renderizarTudo();
+      console.log('♻️ Etiqueta recarregada via postMessage');
+      let st=document.getElementById('statusSave');
+      if(st) st.innerText='♻️ Etiqueta atualizada do teste: '+(JSON.parse(localStorage.getItem('etiqueta_para_impressao')||'{}').serie||'');
+    }catch(err){ console.log('erro recarregar', err); }
+  }
+});
+// Também recarrega quando ganha foco (quando muda de aba)
+window.addEventListener('focus', ()=>{
+  try{ 
+    let para = JSON.parse(localStorage.getItem('etiqueta_para_impressao')||'null');
+    if(para && para.serie && para.serie!==dadosEtiqueta.serie){
+      carregarDaEtiquetaTeste();
+      renderizarTudo();
+    }
+  }catch{}
+});
+
 window.onload=()=>{
     try{
         const raw = localStorage.getItem(STORAGE_KEY);
