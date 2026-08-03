@@ -29,6 +29,19 @@ body{background:#f4f6f9;overflow:hidden}
 .big-number{font-size:35px;font-weight:bold}
 @media (max-width: 768px){.sidebar{width:100%;height:auto;position:relative}.topbar,.content{margin-left:0}#app{overflow:auto}body{overflow:auto}}
 </style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d6efd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EL250-Flash">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1067/1067357.png">
+<style>
+#offlineIndicator{position:fixed;bottom:20px;right:20px;z-index:10000;padding:10px 16px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none}
+#offlineIndicator.offline{display:block;background:#dc3545;color:white}
+#offlineIndicator.online{display:block;background:#198754;color:white;animation:fadeOut 3s forwards 2s}
+@keyframes fadeOut{to{opacity:0;transform:translateY(20px)}}
+</style>
 </head>
 <body>
 <!-- LOGIN -->
@@ -171,6 +184,37 @@ function atualizarDashboard(){
         <td><span class="badge ${t.resultado==='APROVADO'?'bg-success':'bg-danger'}">${t.resultado}</span></td>
     </tr>`).join('');
 }
+</script>
+
+<div id="offlineIndicator"></div>
+<script>
+// Registra Service Worker para funcionar offline
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('✅ SW registrado offline pronto', reg.scope);
+    }).catch(err => console.log('SW falhou', err));
+  });
+}
+
+// Indicador offline/online
+function updateOnlineStatus(){
+  const el = document.getElementById('offlineIndicator');
+  if (!el) return;
+  if (!navigator.onLine){
+    el.textContent = '📴 Modo Offline - funcionando sem internet';
+    el.className = 'offline';
+    el.style.display = 'block';
+  } else {
+    el.textContent = '🌐 Online';
+    el.className = 'online';
+    el.style.display = 'block';
+    setTimeout(()=>{ el.style.display='none'; }, 5000);
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+window.addEventListener('load', updateOnlineStatus);
 </script>
 </body>
 </html>
