@@ -1,4 +1,4 @@
-const CACHE_NAME = 'el250-flash-v5-offline-final';
+const CACHE_NAME = 'el250-flash-v6-vinculado';
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,10 @@ const ASSETS = [
 const CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+  'https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js',
+  'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js',
+  'https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap'
 ];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +27,17 @@ self.addEventListener('install', (e) => {
         try { await cache.add(url); } catch(err) { console.log('ASSET fail', url); }
       }
       for (const url of CDN_ASSETS) {
-        try { await cache.add(url); } catch(err) { console.log('CDN fail', url); }
+        try { 
+          const req = new Request(url, {mode:'no-cors'});
+          const res = await fetch(url);
+          if(res.ok) await cache.put(url, res.clone());
+          else await cache.add(url);
+        } catch(err) { 
+          try {
+            const res = await fetch(url);
+            if(res.ok) await cache.put(url, res.clone());
+          } catch(e2) { console.log('CDN cache fail', url); }
+        }
       }
     })
   );
@@ -47,20 +60,28 @@ self.addEventListener('fetch', (e) => {
     caches.match(req).then(async cached => {
       if (cached) return cached;
       try {
-        const res = await fetch(req);
-        if (res.ok && (req.url.includes('cdn.jsdelivr') || req.url.includes('bootstrap') || req.url.includes('googleapis') || req.url.includes('gstatic'))) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(req, clone));
+        const networkRes = await fetch(req);
+        if (networkRes.ok) {
+          const url = req.url;
+          const shouldCache = url.includes('cdn.jsdelivr') || url.includes('jsdelivr') || url.includes('bootstrap') || url.includes('googleapis') || url.includes('gstatic') || url.includes('flaticon');
+          if (shouldCache) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then(c => c.put(req, clone));
+          }
         }
-        return res;
+        return networkRes;
       } catch (err) {
         if (req.mode === 'navigate') {
-          return (await caches.match('./etiquetas.html')) || (await caches.match('./index.html')) || Response.error();
+          // tenta retornar exatamente a pagina pedida do cache
+          const url = new URL(req.url);
+          const pathname = url.pathname.split('/').pop() || 'index.html';
+          const match = await caches.match('./' + pathname) || await caches.match(pathname);
+          if (match) return match;
+          return (await caches.match('./etiquetas.html')) || (await caches.match('./index.html'));
         }
         if (req.url.includes('fonts.googleapis') || req.url.includes('gstatic')) {
           return new Response('', {status:200, headers:{'Content-Type':'text/css'}});
         }
-        return Response.error();
       }
     })
   );
