@@ -1,5 +1,5 @@
 // Sistema de Autenticação e Permissões - Leitores PRO v2
-// admin = acesso total | operador = testes + etiquetas + logs
+// admin = acesso total | operador = testes + etiquetas + logs - LIBERADO
 // Agora com criação de novos usuários
 
 (function(){
@@ -110,9 +110,18 @@
     function requireLogin(){
         const s = getSession();
         if(!s.logged){
-            const current = window.location.pathname.split('/').pop() || 'index.html';
+            const current = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+            // Se for etiquetas dentro de iframe, não redireciona (deixa carregar)
+            try{
+                if(window.self !== window.top && current === 'etiquetas.html'){
+                    return true;
+                }
+            }catch(e){}
             if(current !== 'index.html' && current !== ''){
-                window.location.href = 'index.html';
+                // evita redirecionar iframe
+                if(window.self === window.top){
+                    window.location.href = 'index.html';
+                }
             }
             return false;
         }
@@ -123,6 +132,13 @@
         const s = getSession();
         if(!s.logged) return requireLogin();
         const pagina = (window.location.pathname.split('/').pop()||'').toLowerCase();
+        // Se estiver dentro de iframe (tab de testes), libera etiquetas para operador
+        try{
+            if(window.self !== window.top && pagina === 'etiquetas.html'){
+                return true;
+            }
+        }catch(e){}
+
         const paginasOperador = ['testes.html', 'logs.html', 'etiquetas.html']; 
         const paginasLivres = ['index.html','']; 
         const paginasBloqueadasOperador = ['produtos.html','operadores.html','historico.html','relatorios.html'];
@@ -140,7 +156,7 @@
                 return false;
             }
             if(!paginasOperador.includes(pagina)){
-                alert('Acesso restrito: operadores só podem acessar a tela de Testes');
+                alert('Acesso restrito: operadores só podem acessar Testes, Etiquetas e Logs');
                 window.location.href = 'testes.html';
                 return false;
             }
@@ -174,9 +190,18 @@
                 const href=(a.getAttribute('href')||'').toLowerCase();
                 if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('historico.html') || href.includes('relatorios.html')){
                     if(document.getElementById('menuDropdown') && a.closest('#menuDropdown')) a.style.display='none';
+                    else if(a.closest('.sidebar')===null) {
+                        // top-nav admin only
+                        const isTopNav = a.closest('.top-nav');
+                        if(isTopNav) a.style.display='none';
+                    }
+                }
+                if(href.includes('etiquetas.html')){
+                    a.style.display='';
+                    a.innerHTML = '<i class="bi bi-printer"></i> Etiquetas';
                 }
                 if(href.includes('logs.html')){
-                    a.innerHTML = '<i class="bi bi-person-check"></i> Meus Logs';
+                    a.innerHTML = '<i class="bi bi-person-check"></i> Meus Testes';
                     a.style.display='';
                 }
             });

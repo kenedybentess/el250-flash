@@ -810,8 +810,9 @@ function switchTab(nome){
 }
 let ultima = localStorage.getItem('aba_ativa');
 const sess = window.AuthSystem ? window.AuthSystem.getSession() : null;
-// OPERADOR AGORA PODE ACESSAR ETIQUETAS - liberado
-if(ultima==='tabEtiquetas' && sess && sess.role==='admin') switchTab('etiquetas');
+// LIBERADO: operador agora pode acessar etiquetas
+
+if(ultima==='tabEtiquetas') switchTab('etiquetas');
 setInterval(()=>{
   if(window._ultimoLog && window._ultimoLog.resultado==='APROVADO'){
     let el = document.getElementById('statusTesteAba');
@@ -857,5 +858,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 </script>
 
+
+<script>
+// Força botão Etiquetas visível para operador
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btnEtq = document.getElementById('btnTabEtiquetas');
+  if(btnEtq){
+    btnEtq.style.display = 'inline-block';
+    btnEtq.style.visibility = 'visible';
+    // operador pode ver etiquetas - garante
+    console.log('Botão etiquetas liberado para operador');
+  }
+});
+</script>
 </body>
+
 </html>
