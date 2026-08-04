@@ -288,72 +288,10 @@ function carregarProdutos(){
 function carregarOperadores(){
   const ops=JSON.parse(localStorage.getItem('operadores')||'[]').filter(o=>o.status==='Ativo');
   const sel=document.getElementById('operadorSel');
-  const sess = (window.AuthSystem && window.AuthSystem.getSession) ? window.AuthSystem.getSession() : {logged:false, nome:'', matricula:'', role:''};
-  
-  // Monta opções: se admin, mostra todos. Se operador logado, mostra só ele no topo + lista
-  let opcoes = '';
-  
-  if(sess && sess.logged){
-    // Se operador logado, força ele como primeira opção e selecionado
-    if(sess.role==='operador'){
-      opcoes += `<option value="${sess.nome}" selected>✅ ${sess.matricula} - ${sess.nome} (LOGADO)</option>`;
-      // adiciona os outros mas desabilita troca visualmente? mantém mas não seleciona
-      const outros = ops.filter(o => o.nome!==sess.nome && o.matricula!==sess.matricula);
-      if(outros.length>0){
-        opcoes += outros.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
-      }
-    } else {
-      // Admin logado: mostra todos, mas se já tem nome igual ao logado, destaca
-      opcoes = '<option value="">Selecione o Operador</option>';
-      opcoes += ops.map(o=>{
-        const isLogado = (sess.nome && o.nome===sess.nome) || (sess.matricula && o.matricula===sess.matricula);
-        return `<option value="${o.nome}" ${isLogado?'selected':''}>${isLogado?'✅ ':''}${o.matricula} - ${o.nome} ${isLogado?'(VOCÊ)':''}</option>`;
-      }).join('');
-      // Se admin fixo ADMIN não está na lista, adiciona opção para ele mesmo
-      if(sess.matricula==='ADMIN' || sess.nome==='Administrador'){
-        if(!ops.some(o=>o.matricula==='ADMIN')){
-          opcoes += `<option value="${sess.nome}" ${!opcoes.includes('selected')?'selected':''}>✅ ADMIN - ${sess.nome} (LOGADO)</option>`;
-        }
-      }
-    }
-  } else {
-    opcoes = '<option value="">Selecione o Operador</option>'+ops.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
-  }
-  
-  sel.innerHTML = opcoes;
-  
+  sel.innerHTML='<option value="">Selecione o Operador</option>'+ops.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
   const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
-  // Se não é operador, respeita config salva. Se é operador, ignora e mantém logado
-  if(sess.role!=='operador' && cfg && cfg.operador){
-    // só sobrescreve se não já selecionou logado
-    if(!sel.value) sel.value=cfg.operador;
-  }
-  
-  // Se for operador logado, trava o select
-  if(sess && sess.role==='operador'){
-    sel.disabled = true;
-    sel.style.background = '#d1e7dd';
-    sel.style.borderColor = '#198754';
-    sel.style.fontWeight = 'bold';
-    // mostra badge de usuário logado
-    let badge = document.getElementById('badgeUsuarioLogado');
-    if(!badge){
-      const container = sel.parentElement;
-      if(container){
-        const div = document.createElement('div');
-        div.id='badgeUsuarioLogado';
-        div.innerHTML = `<small class="text-success fw-bold"><i class="bi bi-person-check-fill"></i> Logado como: ${sess.nome} (${sess.matricula}) - travado</small>`;
-        container.appendChild(div);
-      }
-    }
-  }
-  
+  if(cfg && cfg.operador) sel.value=cfg.operador;
   sel.addEventListener('change',salvarConfigFixa);
-  
-  // Atualiza etiqueta auto com operador logado
-  setTimeout(()=>{ 
-    if(typeof atualizarEtiquetaAuto==='function') atualizarEtiquetaAuto();
-  }, 100);
 }
 function carregarConfigFixa(){
   const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
@@ -810,9 +748,10 @@ function switchTab(nome){
 }
 let ultima = localStorage.getItem('aba_ativa');
 const sess = window.AuthSystem ? window.AuthSystem.getSession() : null;
-// LIBERADO: operador agora pode acessar etiquetas
-
-if(ultima==='tabEtiquetas') switchTab('etiquetas');
+if(sess && sess.role==='operador' && ultima==='tabEtiquetas'){
+  ultima = null; // operador não pode abrir etiquetas
+}
+if(ultima==='tabEtiquetas' && sess && sess.role==='admin') switchTab('etiquetas');
 setInterval(()=>{
   if(window._ultimoLog && window._ultimoLog.resultado==='APROVADO'){
     let el = document.getElementById('statusTesteAba');
@@ -826,12 +765,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const nomeEl = document.getElementById('nomeUsuarioTeste');
   if(nomeEl && s.logged){
     nomeEl.innerHTML = `${s.nome} <span class="badge ${s.role==='admin'?'bg-danger':'bg-success'}" style="font-size:10px">${s.role.toUpperCase()}</span>`;
-  }
-  // Novo: atualiza banner superior com usuário logado
-  const banner = document.getElementById('infoUsuarioLogado');
-  if(banner && s.logged){
-    banner.innerHTML = `<span><i class="bi bi-person-circle"></i> <b>${s.nome}</b> <small>(${s.matricula} - ${s.role})</small> <span class="badge ${s.role==='admin'?'bg-danger':'bg-success'} ms-2" style="font-size:9px">${s.role.toUpperCase()}</span> ${s.role==='operador'?'<span class="ms-2 text-warning">🔓 Acesso: Testes + Etiquetas</span>':''}</span><button onclick="AuthSystem.logout()" class="btn btn-sm btn-outline-light py-0"><i class="bi bi-box-arrow-left"></i> Sair</button>`;
-    banner.style.display='flex';
   }
   if(s.role==='operador'){
     document.querySelectorAll('[data-admin-only]').forEach(el=>el.style.display='none');
@@ -858,19 +791,5 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 </script>
 
-
-<script>
-// Força botão Etiquetas visível para operador
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btnEtq = document.getElementById('btnTabEtiquetas');
-  if(btnEtq){
-    btnEtq.style.display = 'inline-block';
-    btnEtq.style.visibility = 'visible';
-    // operador pode ver etiquetas - garante
-    console.log('Botão etiquetas liberado para operador');
-  }
-});
-</script>
 </body>
-
 </html>
