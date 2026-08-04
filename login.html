@@ -10,118 +10,133 @@
 <meta name="theme-color" content="#0d6efd">
 <style>
 *{font-family:'Segoe UI',Tahoma,sans-serif}
-body{min-height:100vh;background: radial-gradient(1200px 600px at 20% -10%, #4da3ff 0%, transparent 60%), radial-gradient(1000px 500px at 100% 100%, #0b5ed7 0%, transparent 50%), linear-gradient(135deg,#0d6efd,#084298);display:flex;align-items:center;justify-content:center;padding:20px;margin:0}
-.login-wrapper{width:100%;max-width:920px;display:grid;grid-template-columns:1.1fr .9fr;gap:0;background:white;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.left{background:linear-gradient(135deg,#0d6efd,#1e88e5);color:white;padding:40px;display:flex;flex-direction:column;justify-content:space-between}
-.left h1{font-weight:800;font-size:28px}
-.feat div{background:rgba(255,255,255,.15);padding:12px 14px;border-radius:12px;margin-bottom:10px;display:flex;gap:10px;align-items:center}
-.right{padding:40px}
-.btn-login{background:linear-gradient(135deg,#0d6efd,#1e88e5);border:none;padding:12px;font-weight:700;font-size:16px;box-shadow:0 8px 20px rgba(13,110,253,.35)}
-.card-info{border:2px dashed #e9ecef;border-radius:12px;padding:14px;background:#f8f9fa}
-@media(max-width:768px){.login-wrapper{grid-template-columns:1fr}.left{display:none}}
+body{min-height:100vh;background:linear-gradient(135deg,#0d6efd 0%,#084298 100%);display:flex;align-items:center;justify-content:center;padding:20px;margin:0}
+.login-card{width:100%;max-width:440px;background:white;border-radius:20px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.logo{width:64px;height:64px;background:linear-gradient(135deg,#0d6efd,#1e88e5);border-radius:16px;display:flex;align-items:center;justify-content:center;color:white;font-size:30px;margin:0 auto 16px}
+.btn-login{background:#0d6efd;border:none;padding:12px;font-weight:700;font-size:16px}
+.btn-login:hover{background:#0b5ed7}
+.divisor{height:1px;background:#e9ecef;margin:20px 0}
+.badge-role{font-size:10px}
 </style>
 </head>
 <body>
-<div class="login-wrapper">
-  <div class="left">
-    <div>
-      <h1><i class="bi bi-upc-scan"></i> Leitores PRO</h1>
-      <p class="opacity-75">Sistema de Teste EL250 / BR520 / FLASH</p>
-      <div class="feat">
-        <div><i class="bi bi-shield-lock fs-4"></i><div><strong>ADMIN</strong><br><small>Permissão total</small></div></div>
-        <div><i class="bi bi-person-gear fs-4"></i><div><strong>OPERADOR</strong><br><small>Somente TESTES</small></div></div>
-      </div>
-    </div>
-    <small class="opacity-50">v2.1 - Login separado</small>
+<div class="login-card">
+  <div class="text-center mb-4">
+    <div class="logo"><i class="bi bi-cpu"></i></div>
+    <h4 class="fw-bold text-primary mb-1"><i class="bi bi-upc-scan"></i> Sistema Teste Leitores</h4>
+    <p class="text-muted small mb-0">Leitores PRO - EL250 / BR520 / FLASH</p>
   </div>
-  <div class="right">
-    <div class="text-center mb-4">
-      <div style="width:60px;height:60px;background:linear-gradient(135deg,#0d6efd,#1e88e5);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:28px"><i class="bi bi-box-arrow-in-right"></i></div>
-      <h3 class="mt-3 fw-bold">Bem-vindo</h3>
-      <p class="text-muted small">Faça login para continuar</p>
+
+  <div id="alertBox" class="alert alert-danger py-2 small d-none"></div>
+
+  <div class="mb-3">
+    <label class="form-label fw-semibold small">Usuário</label>
+    <input id="user" class="form-control" placeholder="admin ou matrícula" value="admin" autofocus>
+  </div>
+  <div class="mb-3">
+    <label class="form-label fw-semibold small">Senha</label>
+    <div class="input-group">
+      <input id="pass" type="password" class="form-control" placeholder="••••" value="123">
+      <button class="btn btn-outline-secondary" type="button" onclick="togglePass()"><i id="iconPass" class="bi bi-eye"></i></button>
     </div>
-    <div id="alertBox" class="alert alert-danger py-2 small d-none"></div>
-    <div class="mb-3">
-      <label class="form-label fw-semibold small">Usuário / Matrícula</label>
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-person"></i></span>
-        <input id="user" class="form-control" placeholder="admin" value="admin" autofocus>
-      </div>
-    </div>
-    <div class="mb-3">
-      <label class="form-label fw-semibold small">Senha</label>
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-key"></i></span>
-        <input id="pass" type="password" class="form-control" placeholder="••••" value="123">
-        <button class="btn btn-outline-secondary" type="button" onclick="togglePass()"><i id="iconPass" class="bi bi-eye"></i></button>
-      </div>
-      <small class="text-muted">admin / 123 | operador = matrícula como senha padrão</small>
-    </div>
-    <button class="btn btn-primary w-100 btn-login" id="btnEntrar"><i class="bi bi-box-arrow-in-right"></i> Entrar no Sistema</button>
-    <div class="card-info mt-4 small text-muted">
-      <strong>Regras:</strong><br>
-      <span class="text-danger fw-bold">ADMIN</span> → tudo<br>
-      <span class="text-success fw-bold">OPERADOR</span> → só <code>testes.html</code>
-    </div>
-    <div class="mt-3 text-center">
-      <button class="btn btn-sm btn-outline-secondary" onclick="limparTudo()">Limpar cache e recarregar</button>
-    </div>
+    <small class="text-muted" style="font-size:11px">Admin: admin / 123 | Operador: matrícula como senha</small>
+  </div>
+
+  <button class="btn btn-primary w-100 btn-login" id="btnEntrar"><i class="bi bi-box-arrow-in-right"></i> Entrar</button>
+
+  <div class="divisor"></div>
+
+  <div class="d-flex gap-2 small">
+    <div class="flex-fill p-2 rounded" style="background:#f8d7da;border:1px solid #f5c2c7"><strong class="text-danger"><i class="bi bi-shield-lock"></i> ADMIN</strong><br><span class="text-muted" style="font-size:11px">Acesso total: dashboard, produtos, operadores, testes, etiquetas</span></div>
+    <div class="flex-fill p-2 rounded" style="background:#d1e7dd;border:1px solid #badbcc"><strong class="text-success"><i class="bi bi-person-gear"></i> OPERADOR</strong><br><span class="text-muted" style="font-size:11px">Só acessa TESTES</span></div>
+  </div>
+
+  <div class="mt-3 text-center">
+    <button class="btn btn-sm btn-link text-muted" style="font-size:11px" onclick="limparCache()">Limpar cache se não entrar</button>
   </div>
 </div>
 
-<script src="auth.js"></script>
 <script>
-// Inicializa storage se vazio
-if(!localStorage.getItem('produtos')) localStorage.setItem('produtos',JSON.stringify([]));
+// AUTH EMBUTIDO - não depende de auth.js externo para aparecer
+(function(){
+  const ADMIN_USER='admin', ADMIN_PASS='123';
+  function getOps(){ try{return JSON.parse(localStorage.getItem('operadores')||'[]')}catch{return []} }
+  function saveSess(role,nome,mat,id){
+    sessionStorage.setItem('logged','true');
+    sessionStorage.setItem('user_role',role);
+    sessionStorage.setItem('user_nome',nome);
+    sessionStorage.setItem('user_matricula',mat);
+    sessionStorage.setItem('user_id',id||mat);
+  }
+  function tentarLogin(u,p){
+    u=(u||'').trim(); p=(p||'').trim();
+    if(!u||!p) return {ok:false,msg:'Preencha usuário e senha'};
+    if(u.toLowerCase()===ADMIN_USER && p===ADMIN_PASS){
+      saveSess('admin','Administrador','ADMIN','admin');
+      return {ok:true,role:'admin',redirect:'index.html'};
+    }
+    const ops=getOps();
+    let op=ops.find(o=>o.matricula.toLowerCase()===u.toLowerCase() && o.status==='Ativo');
+    if(!op) op=ops.find(o=>o.usuario && o.usuario.toLowerCase()===u.toLowerCase() && o.status==='Ativo');
+    if(op){
+      const senhaCorreta=op.senha||op.matricula;
+      if(p===senhaCorreta){
+        const role=(op.perfil==='admin')?'admin':'operador';
+        saveSess(role,op.nome,op.matricula,op.id);
+        return {ok:true,role,redirect: role==='operador'?'testes.html':'index.html'};
+      }else return {ok:false,msg:'Senha inválida'};
+    }
+    return {ok:false,msg:'Usuário ou senha inválidos'};
+  }
+  window.tentarLoginLocal=tentarLogin;
+})();
+
+// Inicializa storage
 if(!localStorage.getItem('operadores')){
   localStorage.setItem('operadores',JSON.stringify([{id:'1',matricula:'ADMIN',nome:'Administrador',usuario:'admin',senha:'123',perfil:'admin',turno:'Administrativo',status:'Ativo'}]));
 }
+if(!localStorage.getItem('produtos')) localStorage.setItem('produtos',JSON.stringify([]));
 if(!localStorage.getItem('testes')) localStorage.setItem('testes',JSON.stringify([]));
 
 function togglePass(){
-  const p=document.getElementById('pass');
-  const ic=document.getElementById('iconPass');
+  const p=document.getElementById('pass'), ic=document.getElementById('iconPass');
   if(p.type==='password'){p.type='text';ic.className='bi bi-eye-slash';} else {p.type='password';ic.className='bi bi-eye';}
 }
-function showError(msg){
-  const b=document.getElementById('alertBox');
-  b.textContent=msg; b.classList.remove('d-none');
+function showError(m){
+  const b=document.getElementById('alertBox'); b.textContent=m; b.classList.remove('d-none');
+  setTimeout(()=>b.classList.add('d-none'),4000);
 }
-function limparTudo(){
-  if(confirm('Limpar cache do navegador e Service Worker?')){
-    sessionStorage.clear();
-    if('caches' in window){caches.keys().then(k=>k.forEach(c=>caches.delete(c)));}
-    if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(r=>r.unregister()));}
-    localStorage.removeItem('aba_ativa');
-    alert('Cache limpo! Recarregando...');
-    location.reload(true);
-  }
+function limparCache(){
+  sessionStorage.clear();
+  if('caches' in window) caches.keys().then(k=>k.forEach(c=>caches.delete(c)));
+  if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));
+  alert('Cache limpo! Recarregue a página');
+  location.reload(true);
 }
 function doLogin(){
   const u=document.getElementById('user').value;
   const p=document.getElementById('pass').value;
-  if(!window.AuthSystem){ alert('auth.js não carregou! Verifique o arquivo'); return; }
-  const res=AuthSystem.tentarLogin(u,p);
+  const res=window.tentarLoginLocal(u,p);
   if(res.ok){
     window.location.href=res.redirect;
-  }else{
-    showError(res.msg);
-  }
+  }else showError(res.msg);
 }
-document.getElementById('btnEntrar').addEventListener('click', doLogin);
-document.getElementById('pass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
-document.getElementById('user').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
 
-// Se já logado, redireciona
-document.addEventListener('DOMContentLoaded',()=>{
-  try{
-    const s=AuthSystem.getSession();
-    if(s.logged){
-      if(s.role==='operador') window.location.href='testes.html';
-      else window.location.href='index.html';
-    }
-  }catch(e){ console.log('sem sessão ainda', e); }
-});
+document.getElementById('btnEntrar').addEventListener('click',doLogin);
+document.getElementById('pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('user').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// Se já logado, redireciona automaticamente
+try{
+  if(sessionStorage.getItem('logged')==='true'){
+    const role=sessionStorage.getItem('user_role');
+    if(role==='operador') window.location.href='testes.html';
+    else window.location.href='index.html';
+  }
+}catch(e){}
+
+console.log('Login v3 carregado - standalone');
 </script>
 </body>
 </html>
