@@ -12,18 +12,27 @@
         .sidebar{width:250px;background:#212529;color:white;height:100vh;position:fixed;left:0;top:0}
         .sidebar h3{padding:20px;text-align:center;background:#0d6efd}
         .sidebar ul{list-style:none;padding:0}
-        .sidebar a{color:white;text-decoration:none;display:block;padding:15px 20px}
-        .sidebar a:hover,.sidebar li.active a{background:#0d6efd}
-        .sidebar li.logout{padding:15px 20px;cursor:pointer}
-        .sidebar li.logout:hover{background:#dc3545}
+        .sidebar li{padding:15px 20px;cursor:pointer;transition:.3s}
+        .sidebar li:hover,.sidebar li.active{background:#0d6efd}
+        .sidebar a{color:white;text-decoration:none;display:block}
         .topbar{margin-left:250px;height:60px;background:white;display:flex;justify-content:space-between;align-items:center;padding:0 25px;box-shadow:0 2px 5px rgba(0,0,0,.1)}
         .content{margin-left:250px;padding:25px;height:calc(100vh - 60px);overflow:auto}
     </style>
+
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d6efd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EL250-Flash">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1067/1067357.png">
+<style>
+#offlineIndicator{position:fixed;bottom:20px;right:20px;z-index:10000;padding:10px 16px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none}
+#offlineIndicator.offline{display:block;background:#dc3545;color:white}
+#offlineIndicator.online{display:block;background:#198754;color:white;animation:fadeOut 3s forwards 2s}
+@keyframes fadeOut{to{opacity:0;transform:translateY(20px)}}
+</style>
 </head>
 <body>
-<script src="auth.js"></script>
     <div class="sidebar">
         <h3><i class="bi bi-upc-scan"></i> Leitores PRO</h3>
         <ul>
@@ -31,31 +40,30 @@
             <li><a href="produtos.html"><i class="bi bi-box-seam"></i> Produtos</a></li>
             <li class="active"><a href="operadores.html"><i class="bi bi-people"></i> Operadores</a></li>
             <li><a href="testes.html"><i class="bi bi-clipboard-check"></i> Testes</a></li>
-            <li><a href="logs.html"><i class="bi bi-clock-history"></i> Histórico</a></li>
-            <li><a href="etiquetas.html"><i class="bi bi-printer"></i> Etiquetas</a></li>
-            <li class="logout" onclick="AuthSystem.logout()"><i class="bi bi-box-arrow-left"></i> Sair</li>
+            <li><a href="historico.html"><i class="bi bi-clock-history"></i> Histórico</a></li>
         </ul>
     </div>
     <div class="topbar">
-        <h4>Cadastro de Operadores <span class="badge bg-danger">ADMIN ONLY</span></h4>
-        <div id="nomeUsuario">Administrador</div>
+        <h4>Cadastro de Operadores</h4>
+        <div>Administrador</div>
     </div>
     <div class="content">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2><i class="bi bi-people"></i> Operadores</h2>
-                <small class="text-muted">Defina senha e perfil: <b>operador = só testes</b> | <b>admin = total</b></small>
-            </div>
-            <button class="btn btn-primary" onclick="abrirModalOperador()"><i class="bi bi-plus-circle"></i> Novo Operador</button>
+            <h2><i class="bi bi-people"></i> Operadores</h2>
+            <button class="btn btn-primary" onclick="abrirModalOperador()">
+                <i class="bi bi-plus-circle"></i> Novo Operador
+            </button>
         </div>
-        <div class="card"><div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead><tr><th>Matrícula</th><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Turno</th><th>Status</th><th>Ações</th></tr></thead>
-                    <tbody id="tabelaOperadores"></tbody>
-                </table>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead><tr><th>Matrícula</th><th>Nome</th><th>Turno</th><th>Status</th><th>Ações</th></tr></thead>
+                        <tbody id="tabelaOperadores"></tbody>
+                    </table>
+                </div>
             </div>
-        </div></div>
+        </div>
     </div>
 
     <div class="modal fade" id="modalOperador" tabindex="-1">
@@ -66,25 +74,20 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="operadorId">
-                <div class="mb-3"><label>Matrícula *</label><input id="operadorMatricula" class="form-control" placeholder="Ex: 001"></div>
-                <div class="mb-3"><label>Nome *</label><input id="operadorNome" class="form-control" placeholder="Ex: João Silva"></div>
-                <div class="mb-3"><label>Usuário para login (opcional)</label><input id="operadorUsuario" class="form-control" placeholder="Se vazio usa matrícula"><small class="text-muted">Pode logar com matrícula OU usuário</small></div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label>Senha *</label><input id="operadorSenha" class="form-control" type="text" placeholder="Ex: 1234"><small class="text-muted">Se vazio usa matrícula como senha</small></div>
-                    <div class="col-md-6 mb-3"><label>Perfil *</label>
-                        <select id="operadorPerfil" class="form-select">
-                            <option value="operador">Operador - só Testes</option>
-                            <option value="admin">Admin - Acesso Total</option>
-                        </select>
-                    </div>
+                <div class="mb-3"><label>Matrícula *</label><input id="operadorMatricula" class="form-control"></div>
+                <div class="mb-3"><label>Nome *</label><input id="operadorNome" class="form-control"></div>
+                <div class="mb-3"><label>Turno</label>
+                    <select id="operadorTurno" class="form-select">
+                        <option value="Manhã">Manhã</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Noite">Noite</option>
+                    </select>
                 </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label>Turno</label>
-                        <select id="operadorTurno" class="form-select"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option></select>
-                    </div>
-                    <div class="col-md-6 mb-3"><label>Status</label>
-                        <select id="operadorStatus" class="form-select"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select>
-                    </div>
+                <div class="mb-3"><label>Status</label>
+                    <select id="operadorStatus" class="form-select">
+                        <option value="Ativo">Ativo</option>
+                        <option value="Inativo">Inativo</option>
+                    </select>
                 </div>
             </div>
             <div class="modal-footer">
@@ -96,7 +99,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        if(!localStorage.getItem('operadores')) localStorage.setItem('operadores', JSON.stringify([{id:'1',matricula:'ADMIN',nome:'Administrador',usuario:'admin',senha:'123',perfil:'admin',turno:'Administrativo',status:'Ativo'}]));
+        if(!localStorage.getItem('operadores')) localStorage.setItem('operadores', JSON.stringify([]));
         let modalOperador;
         document.addEventListener('DOMContentLoaded', () => {
             modalOperador = new bootstrap.Modal(document.getElementById('modalOperador'));
@@ -105,12 +108,10 @@
         function carregarOperadores(){
             const ops = JSON.parse(localStorage.getItem('operadores'));
             const tbody = document.getElementById('tabelaOperadores');
-            tbody.innerHTML = ops.length === 0 ? '<tr><td colspan="7" class="text-center text-muted">Nenhum operador</td></tr>' : 
+            tbody.innerHTML = ops.length === 0 ? '<tr><td colspan="5" class="text-center text-muted">Nenhum operador</td></tr>' : 
                 ops.map(o => `
                     <tr>
-                        <td><strong>${o.matricula}</strong></td><td>${o.nome}</td><td>${o.usuario||'-'}</td>
-                        <td><span class="badge ${o.perfil==='admin'?'bg-danger':'bg-success'}">${o.perfil||'operador'}</span></td>
-                        <td>${o.turno||'-'}</td>
+                        <td><strong>${o.matricula}</strong></td><td>${o.nome}</td><td>${o.turno}</td>
                         <td><span class="badge ${o.status==='Ativo'?'bg-success':'bg-secondary'}">${o.status}</span></td>
                         <td>
                             <button class="btn btn-sm btn-warning me-1" onclick="editarOperador('${o.id}')"><i class="bi bi-pencil"></i></button>
@@ -123,26 +124,19 @@
             document.getElementById('operadorId').value = '';
             document.getElementById('operadorMatricula').value = '';
             document.getElementById('operadorNome').value = '';
-            document.getElementById('operadorUsuario').value = '';
-            document.getElementById('operadorSenha').value = '';
-            document.getElementById('operadorPerfil').value = 'operador';
             modalOperador.show();
         }
         function salvarOperador(){
             const id = document.getElementById('operadorId').value;
             const matricula = document.getElementById('operadorMatricula').value.trim();
             const nome = document.getElementById('operadorNome').value.trim();
-            const usuario = document.getElementById('operadorUsuario').value.trim();
-            const senha = document.getElementById('operadorSenha').value.trim();
-            const perfil = document.getElementById('operadorPerfil').value;
             const turno = document.getElementById('operadorTurno').value;
             const status = document.getElementById('operadorStatus').value;
-            if(!matricula||!nome) return alert('Preencha matrícula e nome');
+            if(!matricula||!nome) return alert('Preencha os campos');
             let ops = JSON.parse(localStorage.getItem('operadores'));
             if(ops.find(o => o.matricula === matricula && o.id!== id)) return alert('Matrícula já existe');
-            const dados = {id: id||Date.now().toString(), matricula, nome, usuario: usuario||matricula, senha: senha||matricula, perfil, turno, status};
-            if(id) ops = ops.map(o => o.id === id? dados : o);
-            else ops.push(dados);
+            if(id) ops = ops.map(o => o.id === id? {id,matricula,nome,turno,status} : o);
+            else ops.push({id:Date.now().toString(),matricula,nome,turno,status});
             localStorage.setItem('operadores', JSON.stringify(ops));
             modalOperador.hide(); carregarOperadores();
         }
@@ -152,19 +146,47 @@
             document.getElementById('operadorId').value = o.id;
             document.getElementById('operadorMatricula').value = o.matricula;
             document.getElementById('operadorNome').value = o.nome;
-            document.getElementById('operadorUsuario').value = o.usuario||'';
-            document.getElementById('operadorSenha').value = o.senha||'';
-            document.getElementById('operadorPerfil').value = o.perfil||'operador';
             document.getElementById('operadorTurno').value = o.turno;
             document.getElementById('operadorStatus').value = o.status;
             modalOperador.show();
         }
         function excluirOperador(id){
-            if(!confirm('Excluir operador?')) return;
+            if(!confirm('Excluir?')) return;
             let ops = JSON.parse(localStorage.getItem('operadores')).filter(o => o.id!== id);
             localStorage.setItem('operadores', JSON.stringify(ops));
             carregarOperadores();
         }
     </script>
+
+<div id="offlineIndicator"></div>
+<script>
+// Registra Service Worker para funcionar offline
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('✅ SW registrado offline pronto', reg.scope);
+    }).catch(err => console.log('SW falhou', err));
+  });
+}
+
+// Indicador offline/online
+function updateOnlineStatus(){
+  const el = document.getElementById('offlineIndicator');
+  if (!el) return;
+  if (!navigator.onLine){
+    el.textContent = '📴 Modo Offline - funcionando sem internet';
+    el.className = 'offline';
+    el.style.display = 'block';
+  } else {
+    el.textContent = '🌐 Online';
+    el.className = 'online';
+    el.style.display = 'block';
+    setTimeout(()=>{ el.style.display='none'; }, 5000);
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+window.addEventListener('load', updateOnlineStatus);
+</script>
 </body>
 </html>

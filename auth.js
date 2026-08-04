@@ -1,4 +1,4 @@
-// Sistema de AutenticaÃ§Ã£o e PermissÃµes - Leitores PRO
+// Sistema de Autenticação e Permissões - Leitores PRO
 // admin = acesso total | operador = somente testes.html
 
 (function(){
@@ -50,7 +50,7 @@
     function tentarLogin(usuario, senha){
         const u = (usuario||'').trim();
         const p = (senha||'').trim();
-        if(!u || !p) return {ok:false, msg:'Preencha usuÃ¡rio e senha'};
+        if(!u || !p) return {ok:false, msg:'Preencha usuário e senha'};
 
         // 1 - admin fixo
         if(u.toLowerCase() === ADMIN_USER && p === ADMIN_PASS){
@@ -60,11 +60,11 @@
 
         // 2 - operadores cadastrados
         const ops = getOperadores();
-        // compat: se operador antigo sem senha, usa matricula como senha padrÃ£o
-        // perfil: 'admin' ou 'operador' - padrÃ£o operador
+        // compat: se operador antigo sem senha, usa matricula como senha padrão
+        // perfil: 'admin' ou 'operador' - padrão operador
         let op = ops.find(o => o.matricula.toLowerCase() === u.toLowerCase() && o.status === 'Ativo');
         if(!op){
-            // tenta tambÃ©m por nome de usuÃ¡rio se houver campo usuario
+            // tenta também por nome de usuário se houver campo usuario
             op = ops.find(o => (o.usuario && o.usuario.toLowerCase() === u.toLowerCase()) && o.status === 'Ativo');
         }
         if(op){
@@ -74,11 +74,11 @@
                 saveSession({role, nome: op.nome, matricula: op.matricula, id: op.id});
                 return {ok:true, role};
             } else {
-                return {ok:false, msg:'Senha invÃ¡lida'};
+                return {ok:false, msg:'Senha inválida'};
             }
         }
 
-        return {ok:false, msg:'UsuÃ¡rio ou senha invÃ¡lidos'};
+        return {ok:false, msg:'Usuário ou senha inválidos'};
     }
 
     function requireLogin(){
@@ -86,7 +86,7 @@
         if(!s.logged){
             const current = window.location.pathname.split('/').pop() || 'index.html';
             if(current !== 'index.html' && current !== ''){
-                // se nÃ£o estiver no login, volta pro login
+                // se não estiver no login, volta pro login
                 window.location.href = 'index.html';
             }
             return false;
@@ -94,12 +94,12 @@
         return true;
     }
 
-    // bloqueia operador em pÃ¡ginas admin
+    // bloqueia operador em páginas admin
     function requirePermission(){
         const s = getSession();
         if(!s.logged) return requireLogin();
         const pagina = (window.location.pathname.split('/').pop()||'').toLowerCase();
-        // operador pode acessar testes e logs (filtrado), mas nÃ£o dashboard/produtos/operadores/etiquetas/relatorios
+        // operador pode acessar testes e logs (filtrado), mas não dashboard/produtos/operadores/etiquetas/relatorios
         const paginasOperador = ['testes.html', 'logs.html']; 
         const paginasLivres = ['index.html','']; // index trata redirecionamento
         const paginasBloqueadasOperador = ['produtos.html','operadores.html','etiquetas.html','historico.html','relatorios.html','index.html'];
@@ -112,13 +112,13 @@
                 return false;
             }
             if(paginasBloqueadasOperador.includes(pagina)){
-                alert('Acesso restrito: operadores sÃ³ podem acessar Testes e Meus Logs');
+                alert('Acesso restrito: operadores só podem acessar Testes e Meus Logs');
                 window.location.href = 'testes.html';
                 return false;
             }
             if(!paginasOperador.includes(pagina)){
                 // qualquer outra pagina desconhecida, bloqueia
-                alert('Acesso restrito: operadores sÃ³ podem acessar a tela de Testes');
+                alert('Acesso restrito: operadores só podem acessar a tela de Testes');
                 window.location.href = 'testes.html';
                 return false;
             }
@@ -147,14 +147,14 @@
                 if(href.includes('testes.html')){
                     a.classList.add('active');
                 }
-                // logs.html fica visÃ­vel como "Meus Testes"
+                // logs.html fica visível como "Meus Testes"
                 if(href.includes('logs.html')){
                     a.innerHTML = '<i class="bi bi-person-check"></i> Meus Testes';
                     const li = a.closest('li');
                     if(li) li.style.display='';
                 }
             });
-            // esconde top-nav em testes.html que leva pra admin (mantÃ©m logs)
+            // esconde top-nav em testes.html que leva pra admin (mantém logs)
             document.querySelectorAll('.top-nav a, .menu-dropdown a').forEach(a=>{
                 const href=(a.getAttribute('href')||'').toLowerCase();
                 if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('etiquetas.html') || href.includes('historico.html') || href.includes('relatorios.html')){
@@ -168,7 +168,7 @@
                 }
             });
 
-            // esconde botÃµes de admin dentro de testes.html se houver
+            // esconde botões de admin dentro de testes.html se houver
             const btnsAdmin = document.querySelectorAll('[data-admin-only]');
             btnsAdmin.forEach(b=>b.style.display='none');
         }
@@ -179,16 +179,16 @@
         window.location.href = 'index.html';
     }
 
-    // expÃµe global
+    // expõe global
     window.AuthSystem = {
         getSession, isAdmin, isOperador, tentarLogin, requireLogin, requirePermission, aplicarVisualPermissoes, logout, saveSession, clearSession
     };
 
-    // auto-exec em todas as pÃ¡ginas exceto login page quando jÃ¡ gerencia
+    // auto-exec em todas as páginas exceto login page quando já gerencia
     document.addEventListener('DOMContentLoaded', ()=>{
         const pagina = (window.location.pathname.split('/').pop()||'').toLowerCase();
         if(pagina !== 'index.html' && pagina !== ''){
-            // pÃ¡ginas internas: exige login e permissÃ£o
+            // páginas internas: exige login e permissão
             if(!requireLogin()) return;
             requirePermission();
             aplicarVisualPermissoes();

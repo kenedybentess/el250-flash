@@ -1,7 +1,7 @@
 const CACHE_NAME = 'el250-flash-v6-vinculado';
 const ASSETS = [
   './',
-  './login.html',
+  './index.html',
   './produtos.html',
   './operadores.html',
   './testes.html',
@@ -74,10 +74,10 @@ self.addEventListener('fetch', (e) => {
         if (req.mode === 'navigate') {
           // tenta retornar exatamente a pagina pedida do cache
           const url = new URL(req.url);
-          const pathname = url.pathname.split('/').pop() || 'login.html';
+          const pathname = url.pathname.split('/').pop() || 'index.html';
           const match = await caches.match('./' + pathname) || await caches.match(pathname);
           if (match) return match;
-          return (await caches.match('./etiquetas.html')) || (await caches.match('./login.html'));
+          return (await caches.match('./etiquetas.html')) || (await caches.match('./index.html'));
         }
         if (req.url.includes('fonts.googleapis') || req.url.includes('gstatic')) {
           return new Response('', {status:200, headers:{'Content-Type':'text/css'}});
