@@ -1,5 +1,5 @@
 // Sistema de Autenticação e Permissões - Leitores PRO v2
-// admin = acesso total | operador = somente testes.html
+// admin = acesso total | operador = testes + etiquetas + logs
 // Agora com criação de novos usuários
 
 (function(){
@@ -123,9 +123,9 @@
         const s = getSession();
         if(!s.logged) return requireLogin();
         const pagina = (window.location.pathname.split('/').pop()||'').toLowerCase();
-        const paginasOperador = ['testes.html', 'logs.html']; 
+        const paginasOperador = ['testes.html', 'logs.html', 'etiquetas.html']; 
         const paginasLivres = ['index.html','']; 
-        const paginasBloqueadasOperador = ['produtos.html','operadores.html','etiquetas.html','historico.html','relatorios.html'];
+        const paginasBloqueadasOperador = ['produtos.html','operadores.html','historico.html','relatorios.html'];
 
         if(s.role === 'operador'){
             if(paginasLivres.includes(pagina)){
@@ -135,7 +135,7 @@
                 return false;
             }
             if(paginasBloqueadasOperador.includes(pagina)){
-                alert('Acesso restrito: operadores só podem acessar Testes e Meus Logs');
+                alert('Acesso restrito: operadores só podem acessar Testes, Etiquetas e Meus Logs');
                 window.location.href = 'testes.html';
                 return false;
             }
@@ -158,7 +158,7 @@
         if(s.role === 'operador'){
             document.querySelectorAll('.sidebar a').forEach(a=>{
                 const href = (a.getAttribute('href')||'').toLowerCase();
-                if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('historico') || href.includes('relatorios') || href.includes('etiquetas.html') || href.includes('index.html')){
+                if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('historico') || href.includes('relatorios') || href.includes('index.html')){
                     const li = a.closest('li');
                     if(li) li.style.display='none';
                     else a.style.display='none';
@@ -172,7 +172,7 @@
             });
             document.querySelectorAll('.top-nav a, .menu-dropdown a').forEach(a=>{
                 const href=(a.getAttribute('href')||'').toLowerCase();
-                if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('etiquetas.html') || href.includes('historico.html') || href.includes('relatorios.html')){
+                if(href.includes('produtos.html') || href.includes('operadores.html') || href.includes('historico.html') || href.includes('relatorios.html')){
                     if(document.getElementById('menuDropdown') && a.closest('#menuDropdown')) a.style.display='none';
                 }
                 if(href.includes('logs.html')){

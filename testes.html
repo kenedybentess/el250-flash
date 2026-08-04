@@ -285,6 +285,339 @@ function carregarProdutos(){
     salvarConfigFixa();
   });
 }
+function carregarOperadores(){
+  const ops=JSON.parse(localStorage.getItem('operadores')||'[]').filter(o=>o.status==='Ativo');
+  const sel=document.getElementById('operadorSel');
+  const sess = (window.AuthSystem && window.AuthSystem.getSession) ? window.AuthSystem.getSession() : {logged:false, nome:'', matricula:'', role:''};
+  
+  // Monta opções: se admin, mostra todos. Se operador logado, mostra só ele no topo + lista
+  let opcoes = '';
+  
+  if(sess && sess.logged){
+    // Se operador logado, força ele como primeira opção e selecionado
+    if(sess.role==='operador'){
+      opcoes += `<option value="${sess.nome}" selected>✅ ${sess.matricula} - ${sess.nome} (LOGADO)</option>`;
+      // adiciona os outros mas desabilita troca visualmente? mantém mas não seleciona
+      const outros = ops.filter(o => o.nome!==sess.nome && o.matricula!==sess.matricula);
+      if(outros.length>0){
+        opcoes += outros.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
+      }
+    } else {
+      // Admin logado: mostra todos, mas se já tem nome igual ao logado, destaca
+      opcoes = '<option value="">Selecione o Operador</option>';
+      opcoes += ops.map(o=>{
+        const isLogado = (sess.nome && o.nome===sess.nome) || (sess.matricula && o.matricula===sess.matricula);
+        return `<option value="${o.nome}" ${isLogado?'selected':''}>${isLogado?'✅ ':''}${o.matricula} - ${o.nome} ${isLogado?'(VOCÊ)':''}</option>`;
+      }).join('');
+      // Se admin fixo ADMIN não está na lista, adiciona opção para ele mesmo
+      if(sess.matricula==='ADMIN' || sess.nome==='Administrador'){
+        if(!ops.some(o=>o.matricula==='ADMIN')){
+          opcoes += `<option value="${sess.nome}" ${!opcoes.includes('selected')?'selected':''}>✅ ADMIN - ${sess.nome} (LOGADO)</option>`;
+        }
+      }
+    }
+  } else {
+    opcoes = '<option value="">Selecione o Operador</option>'+ops.map(o=>`<option value="${o.nome}">${o.matricula} - ${o.nome}</option>`).join('');
+  }
+  
+  sel.innerHTML = opcoes;
+  
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
+  // Se não é operador, respeita config salva. Se é operador, ignora e mantém logado
+  if(sess.role!=='operador' && cfg && cfg.operador){
+    // só sobrescreve se não já selecionou logado
+    if(!sel.value) sel.value=cfg.operador;
+  }
+  
+  // Se for operador logado, trava o select
+  if(sess && sess.role==='operador'){
+    sel.disabled = true;
+    sel.style.background = '#d1e7dd';
+    sel.style.borderColor = '#198754';
+    sel.style.fontWeight = 'bold';
+    // mostra badge de usuário logado
+    let badge = document.getElementById('badgeUsuarioLogado');
+    if(!badge){
+      const container = sel.parentElement;
+      if(container){
+        const div = document.createElement('div');
+        div.id='badgeUsuarioLogado';
+        div.innerHTML = `<small class="text-success fw-bold"><i class="bi bi-person-check-fill"></i> Logado como: ${sess.nome} (${sess.matricula}) - travado</small>`;
+        container.appendChild(div);
+      }
+    }
+  }
+  
+  sel.addEventListener('change',salvarConfigFixa);
+  
+  // Atualiza etiqueta auto com operador logado
+  setTimeout(()=>{ 
+    if(typeof atualizarEtiquetaAuto==='function') atualizarEtiquetaAuto();
+  }, 100);
+}
+function carregarConfigFixa(){
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'null');
+  if(cfg){
+    if(cfg.produto) document.getElementById('produtoSel').value=cfg.produto;
+    if(cfg.operador) document.getElementById('operadorSel').value=cfg.operador;
+    if(cfg.modelo) document.getElementById('modeloSel').value=cfg.modelo;
+    document.getElementById('statusConfig').innerText='Configurado: '+cfg.produto+' / '+cfg.operador;
+    document.getElementById('statusConfig').className='badge bg-success';
+    configFixa=cfg;
+    bloquearConfig(true);
+  }
+}
+function atualizarEtiquetaAuto(){
+  try{
+    const cfg=JSON.parse(localStorage.getItem('config_fixa_teste')||'{}');
+    const produtoCodigo = cfg.produto || document.getElementById('produtoSel')?.value || '';
+    const modelo = cfg.modelo || document.getElementById('modeloSel')?.value || '';
+    const serie = document.getElementById('serieSel')?.value?.trim() || '';
+    const operador = cfg.operador || document.getElementById('operadorSel')?.value || '';
+    const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+    const prod=produtos.find(p=>p.codigo===produtoCodigo) || {};
+    const nome = prod.nome || produtoCodigo;
+    const ean13 = prod.ean13 || '';
+    const etiquetaAuto = {codigo: produtoCodigo, descricao: nome, modelo: modelo, ean13: ean13, serie: serie, operador: operador, atualizadoEm: new Date().toISOString()};
+    localStorage.setItem('etiqueta_auto', JSON.stringify(etiquetaAuto));
+  }catch(e){}
+}
+function salvarEtiquetaParaImpressao(log){
+  try{
+    const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+    const prod=produtos.find(p=>p.codigo===log.produto) || {};
+    const etiquetaParaImpressao = {codigo: log.produto, descricao: prod.nome || log.produto, modelo: log.modelo, ean13: prod.ean13 || '', serie: log.serie, operador: log.operador, resultado: log.resultado, data: log.fim_br, log_id: log.log_id, timestamp: new Date().toISOString()};
+    localStorage.setItem('etiqueta_para_impressao', JSON.stringify(etiquetaParaImpressao));
+    localStorage.setItem('etiqueta_auto', JSON.stringify(etiquetaParaImpressao));
+    return etiquetaParaImpressao;
+  }catch(e){ return null; }
+}
+function solicitarImpressaoEtiqueta(log){
+  // BLOQUEIO: só solicita se APROVADO
+  if(log && log.resultado && log.resultado!=='APROVADO'){
+    console.log('Bloqueado: teste REPROVADO não gera etiqueta');
+    return;
+  }
+  const etiqueta = salvarEtiquetaParaImpressao(log);
+  let modalExist = document.getElementById('modalImpressaoEtiqueta');
+  if(modalExist) modalExist.remove();
+  const isAprovado = log.resultado==='APROVADO';
+  const modalHtml = `
+  <div id="modalImpressaoEtiqueta" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:16px;max-width:480px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,0.3);overflow:hidden;">
+      <div style="background:${isAprovado?'linear-gradient(135deg,#198754,#20c997)':'linear-gradient(135deg,#dc3545,#fd7e14)'};color:white;padding:18px;text-align:center">
+        <div style="font-size:42px">${isAprovado?'✅':'❌'}</div>
+        <h4 style="margin:8px 0">Teste ${log.resultado}</h4>
+        <small>${log.produto} | S/N: ${log.serie}</small>
+      </div>
+      <div style="padding:20px">
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px">
+          <div><b>Produto:</b> ${etiqueta.descricao} (${etiqueta.codigo})</div>
+          <div><b>Modelo:</b> ${etiqueta.modelo}</div>
+          <div><b>Série:</b> <span style="font-weight:900;">${etiqueta.serie}</span></div>
+          ${etiqueta.ean13?`<div><b>EAN13:</b> ${etiqueta.ean13}</div>`:''}
+          <div><b>Operador:</b> ${etiqueta.operador}</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="fecharModalImpressaoEtiqueta()" style="flex:1;padding:12px;border:1px solid #dee2e6;border-radius:8px;background:white;font-weight:bold;cursor:pointer">Continuar</button>
+          <button onclick="abrirEtiquetaParaImpressao()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#0d6efd;color:white;font-weight:bold;cursor:pointer;">🖨️ Imprimir Etiqueta</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+function fecharModalImpressaoEtiqueta(){ const m=document.getElementById('modalImpressaoEtiqueta'); if(m) m.remove(); }
+function abrirEtiquetaParaImpressao(){ imprimirEtiquetaAuto(window._ultimoLog); fecharModalImpressaoEtiqueta(); }
+function salvarConfigFixa(){
+  const cfg={produto:document.getElementById('produtoSel').value,operador:document.getElementById('operadorSel').value,modelo:document.getElementById('modeloSel').value};
+  if(!cfg.produto||!cfg.operador||!cfg.modelo) return;
+  localStorage.setItem('config_fixa_teste',JSON.stringify(cfg));
+  configFixa=cfg;
+  document.getElementById('statusConfig').innerText='Salvo: '+cfg.produto+' / '+cfg.operador;
+  document.getElementById('statusConfig').className='badge bg-success';
+  bloquearConfig(true);
+  atualizarEtiquetaAuto();
+  document.getElementById('serieSel').focus();
+}
+function bloquearConfig(b){document.getElementById('produtoSel').disabled=b;document.getElementById('operadorSel').disabled=b;document.getElementById('modeloSel').disabled=b;}
+function editarConfigFixa(){bloquearConfig(false);document.getElementById('statusConfig').innerText='Editando...';document.getElementById('statusConfig').className='badge bg-warning text-dark';}
+function sanitizeNome(s){return (s||'').toString().replace(/[\\/:*?"<>|]/g,'-').replace(/\s+/g,'_').slice(0,40);}
+function getCodigosDoProduto(codigoProduto){
+  const produtos=JSON.parse(localStorage.getItem('produtos')||'[]');
+  const prod=produtos.find(p=>p.codigo===codigoProduto);
+  if(prod && prod.codigos && prod.codigos.length>0) return prod.codigos.sort((a,b)=>a.ordem-b.ordem);
+  return [
+    {ordem:1,nome:'QR Code - Etiqueta Produto',valorEsperado:'6922711051772',icone:'qr-code-scan'},
+    {ordem:2,nome:'Código 1D - Caixa 1',valorEsperado:'2112345678917',icone:'upc'},
+    {ordem:3,nome:'Código 1D - Caixa 2',valorEsperado:'6901028075763',icone:'upc-scan'},
+    {ordem:4,nome:'Firmware - Versão',valorEsperado:'',icone:'cpu'}
+  ];
+}
+function renderStepsCodigos(codigos){
+  const container=document.getElementById('stepsContainer');
+  document.getElementById('totalCodigos').innerText=codigos.length;
+  container.innerHTML=codigos.map((c,i)=>{
+    const idx=i+1;
+    const esperado=c.valorEsperado?`Esperado: ${c.valorEsperado}`:'Qualquer leitura';
+    return `<div class="step-card" id="step${idx}"><div class="d-flex justify-content-between"><div><b>${idx} - ${c.nome}</b><br><small class="text-muted">${esperado}</small></div><small id="lido${idx}"></small></div><input id="input${idx}" class="form-control input-leitura mt-2" placeholder="${idx===1?'Bipe: '+c.nome:'Aguardando '+c.nome}" ${idx!==1?'disabled':''}></div>`;
+  }).join('');
+  document.querySelectorAll('.input-leitura').forEach((inp,i)=>{
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();validarLeitura(i+1,inp.value.trim());}});
+  });
+}
+function iniciarSequencia(){
+  if(!localStorage.getItem('config_fixa_teste')){alert('Salve a configuração');return;}
+  const serie=document.getElementById('serieSel').value.trim();
+  if(!serie){alert('Digite o NÚMERO DE SÉRIE');return;}
+  const cfg=JSON.parse(localStorage.getItem('config_fixa_teste'));
+  listaCodigosProduto=getCodigosDoProduto(cfg.produto);
+  codigosEsperados={}; listaCodigosProduto.forEach((c,idx)=>{codigosEsperados[idx+1]=c.valorEsperado||null;});
+  renderStepsCodigos(listaCodigosProduto);
+  inicioTimestamp=new Date();
+  document.getElementById('horaInicio').innerText=inicioTimestamp.toLocaleTimeString('pt-BR');
+  document.getElementById('infoResumo').innerText=`${cfg.produto} | ${cfg.modelo} | Op: ${cfg.operador} | Série: ${serie}`;
+  dadosTeste={produto:cfg.produto,operador:cfg.operador,modelo:cfg.modelo,serie:serie,leituras:{},inicio:inicioTimestamp.toISOString(),codigosNomes:listaCodigosProduto};
+  document.getElementById('areaSequencia').style.display='block';
+  document.getElementById('resultadoFinal').style.display='none';
+  document.getElementById('comprovante').style.display='none';
+  document.getElementById('areaLogTerminal').style.display='none';
+  document.getElementById('msgAutoVolta').style.display='none';
+  document.getElementById('cardSerie').style.display='none';
+  ativarStep(1);
+}
+function ativarStep(n){stepAtual=n;document.querySelectorAll('.step-card').forEach((c,i)=>{c.classList.remove('ativo');if(i+1===n) c.classList.add('ativo');});let inp=document.getElementById('input'+n);if(!inp) return;inp.disabled=false;inp.classList.add('scan-ativo');inp.focus();}
+function validarLeitura(step,codigo){
+  if(!codigo) return;
+  let esp=codigosEsperados[step];let ok=!esp||codigo.replace(/\s/g,'')===esp.replace(/\s/g,'');
+  let inp=document.getElementById('input'+step);inp.value=codigo;inp.classList.remove('scan-ativo');
+  document.getElementById('lido'+step).innerHTML=(ok?'✅ '+codigo:'❌ '+codigo);
+  document.getElementById('step'+step).classList.add(ok?'concluido':'erro');inp.disabled=true;
+  dadosTeste.leituras[step]={codigo,correto:ok,esperado:esp||'LIVRE',nome:listaCodigosProduto[step-1]?.nome||'',timestamp:new Date().toISOString(),hora:new Date().toLocaleTimeString('pt-BR')};
+  if(step < listaCodigosProduto.length) setTimeout(()=>ativarStep(step+1),400); else setTimeout(()=>finalizar(),400);
+}
+async function finalizar(){
+  let fim=new Date();let todos=Object.values(dadosTeste.leituras).every(l=>l.correto);let res=todos?'APROVADO':'REPROVADO';let dur=((fim-inicioTimestamp)/1000).toFixed(1);
+  let teste={id:Date.now().toString(),data:fim.toISOString(),produtoCodigo:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,resultado:res,leituras:dadosTeste.leituras,duracao:dur};
+  let testes=JSON.parse(localStorage.getItem('testes')||'[]');testes.unshift(teste);localStorage.setItem('testes',JSON.stringify(testes));
+  let sessLog = (window.AuthSystem && window.AuthSystem.getSession) ? window.AuthSystem.getSession() : {matricula:''};
+  let log={log_id:'LOG-'+fim.toISOString().slice(0,10).replace(/-/g,'')+'-'+teste.id.slice(-6),teste_id:teste.id,inicio_br:new Date(dadosTeste.inicio).toLocaleString('pt-BR'),fim_br:fim.toLocaleString('pt-BR'),produto:dadosTeste.produto,modelo:dadosTeste.modelo,serie:dadosTeste.serie,operador:dadosTeste.operador,operador_matricula:sessLog.matricula||dadosTeste.operador||'',resultado:res,duracao_segundos:dur,leituras:dadosTeste.leituras,codigosNomes:dadosTeste.codigosNomes,hash:btoa(teste.id+'|'+dadosTeste.serie+'|'+res).slice(0,32).toUpperCase()};
+  let logs=JSON.parse(localStorage.getItem('logs_evidencia')||'[]');logs.unshift(log);localStorage.setItem('logs_evidencia',JSON.stringify(logs));window._ultimoLog=log;
+  document.getElementById('resultadoFinal').style.display='block';
+  if(todos){
+    document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center bg-success text-white"><h3>✅ ${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🖨️ Etiqueta será impressa automaticamente...</span></div></div>`;
+  } else {
+    document.getElementById('resultadoFinal').innerHTML=`<div class="card-body text-center bg-danger text-white"><h3>❌ ${res}</h3><p>${dadosTeste.produto} | ${dadosTeste.modelo} | ${dadosTeste.serie}</p><div class="mt-2"><span class="badge bg-light text-dark">🚫 Etiqueta NÃO será gerada - teste reprovado</span></div></div>`;
+  }
+  preencher(log);
+  atualizarContadorTotal();
+  // Botão imprimir etiqueta só aparece se APROVADO
+  const btnTop = document.getElementById('btnEtiqTop');
+  if(btnTop){
+    if(todos) btnTop.style.display='inline-flex';
+    else btnTop.style.display='none';
+  }
+  try{
+    if(todos){
+      // SÓ GERA E IMPRIME ETIQUETA QUANDO APROVADO
+      salvarEtiquetaParaImpressao(log);
+      const chkAuto = document.getElementById('chkAutoImprimirEtiqueta');
+      const deveImprimir = (chkAuto && chkAuto.checked);
+      if(deveImprimir){ setTimeout(()=>{ imprimirEtiquetaAuto(log); }, 800); } else { setTimeout(()=>{ solicitarImpressaoEtiqueta(log); }, 500); }
+    } else {
+      console.log('Teste REPROVADO - etiqueta não será gerada');
+      // Limpa qualquer etiqueta anterior para não imprimir errado
+      // Não salva etiqueta_para_impressao quando reprovado
+      localStorage.removeItem('etiqueta_para_impressao');
+    }
+  }catch(e){ console.log('Erro etiqueta', e); }
+  if(document.getElementById('chkAutoSalvar').checked){ await salvarLogNaRede(log); }
+  if(document.getElementById('chkAutoVolta').checked){ iniciarContagemRegressivaParaSerie(); }
+}
+
+let _ultimaImpressao = 0;
+function imprimirEtiquetaAuto(log){
+  // BLOQUEIO: só imprime se APROVADO
+  if(log && log.resultado && log.resultado!=='APROVADO'){
+    console.log('Bloqueado: teste REPROVADO não gera etiqueta');
+    alert('🚫 Etiqueta só é gerada quando o teste é APROVADO.\nResultado atual: '+log.resultado);
+    return;
+  }
+  const agora = Date.now();
+  if(agora - _ultimaImpressao < 3000){ console.log('Impressão bloqueada - já imprimiu há menos de 3s'); return; }
+  _ultimaImpressao = agora;
+  const etiqueta = salvarEtiquetaParaImpressao(log);
+  if(!etiqueta){ window.open('etiquetas.html','_blank'); return; }
+  const params = new URLSearchParams({modo:'iframe', codigo: etiqueta.codigo||'', serie: etiqueta.serie||'', ean13: etiqueta.ean13||'', descricao: etiqueta.descricao||'', modelo: etiqueta.modelo||'', operador: etiqueta.operador||'', resultado: etiqueta.resultado||''});
+  const url = 'etiquetas.html?'+params.toString();
+  document.querySelectorAll('iframe.etiqueta-print-frame').forEach(f=>f.remove());
+  const iframe = document.createElement('iframe');
+  iframe.className = 'etiqueta-print-frame';
+  iframe.style.position='fixed'; iframe.style.left='-9999px'; iframe.style.top='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0'; iframe.style.visibility='hidden';
+  iframe.src = url;
+  iframe.onload = ()=>{
+    try{
+      setTimeout(()=>{
+        const win = iframe.contentWindow;
+        if(!win) return;
+        win.focus(); win.print();
+        setTimeout(()=>{ try{ iframe.remove(); }catch{} }, 2000);
+      }, 1000);
+    }catch(e){
+      const win = window.open(url.replace('modo=iframe','autoPrint=1'), '_blank');
+      if(win) setTimeout(()=>{ try{ win.close(); }catch{} }, 8000);
+    }
+  };
+  document.body.appendChild(iframe);
+}
+
+function preencher(log){
+  document.getElementById('comprovante').style.display='block';
+  document.getElementById('c_inicio').innerText=log.inicio_br;
+  document.getElementById('c_fim').innerText=log.fim_br;
+  document.getElementById('c_prod').innerText=log.produto;
+  document.getElementById('c_model').innerText=log.modelo;
+  document.getElementById('c_serie').innerText=log.serie;
+  document.getElementById('c_oper').innerText=log.operador;
+  document.getElementById('c_dur').innerText=log.duracao_segundos+'s';
+  document.getElementById('c_hash').innerText=log.hash;
+  document.getElementById('compResultado').innerText=log.resultado;
+  document.getElementById('compID').innerText=log.log_id;
+  let tbody=document.getElementById('c_leituras');
+  tbody.innerHTML=Object.values(log.leituras).map((l,i)=>`<tr><td>${i+1} - ${l.nome}</td><td>${l.esperado}</td><td>${l.codigo}</td><td>${l.correto?'✅ OK':'❌ ERRO'}</td><td>${l.hora}</td></tr>`).join('');
+  let texto=`LOG ${log.log_id}\nINICIO: ${log.inicio_br} FIM: ${log.fim_br}\nPRODUTO: ${log.produto} MODELO: ${log.modelo} SERIE: ${log.serie} OPERADOR: ${log.operador} RESULTADO: ${log.resultado} DURACAO: ${log.duracao_segundos}s HASH: ${log.hash}\n`+Object.values(log.leituras).map(l=>`${l.nome} | ESP: ${l.esperado} | LIDO: ${l.codigo} | ${l.correto?'OK':'ERRO'}`).join('\n');
+  window._textoLogAtual=texto;
+  document.getElementById('logTerminal').innerText=texto;
+  document.getElementById('areaLogTerminal').style.display='block';
+  document.getElementById('nomeArquivoGerado').innerText=gerarNomeArquivo(log,'txt');
+}
+function voltarParaSerieManual(){
+  document.getElementById('areaSequencia').style.display='none';
+  document.getElementById('resultadoFinal').style.display='none';
+  document.getElementById('comprovante').style.display='none';
+  document.getElementById('areaLogTerminal').style.display='none';
+  document.getElementById('cardSerie').style.display='block';
+  document.getElementById('serieSel').value='';
+  document.getElementById('serieSel').focus();
+  document.getElementById('msgAutoVolta').style.display='none';
+  if(contadorInterval) clearInterval(contadorInterval);
+}
+function atualizarContadorTotal(){
+  const testes=JSON.parse(localStorage.getItem('testes')||'[]');
+  const hoje=new Date().toISOString().slice(0,10);
+  const hojeQtd=testes.filter(t=>t.data && t.data.slice(0,10)===hoje).length;
+  document.getElementById('contadorTotal').innerText='Total: '+testes.length+' | Hoje: '+hojeQtd;
+  let elHoje=document.getElementById('totalHoje'); if(elHoje) elHoje.innerText=hojeQtd;
+}
+function iniciarContagemRegressivaParaSerie(){
+  let seg=3;
+  document.getElementById('msgAutoVolta').style.display='block';
+  document.getElementById('contadorRegressivo').innerText=seg;
+  contadorInterval=setInterval(()=>{
+    seg--;
+    document.getElementById('contadorRegressivo').innerText=seg;
+    if(seg<=0){ clearInterval(contadorInterval); voltarParaSerieManual(); }
+  },1000);
 }
 function gerarNomeArquivo(log,ext){ return sanitizeNome(log.serie)+'_'+log.log_id+'.'+ext; }
 
@@ -477,9 +810,7 @@ function switchTab(nome){
 }
 let ultima = localStorage.getItem('aba_ativa');
 const sess = window.AuthSystem ? window.AuthSystem.getSession() : null;
-if(sess && sess.role==='operador' && ultima==='tabEtiquetas'){
-  ultima = null; // operador não pode abrir etiquetas
-}
+// OPERADOR AGORA PODE ACESSAR ETIQUETAS - liberado
 if(ultima==='tabEtiquetas' && sess && sess.role==='admin') switchTab('etiquetas');
 setInterval(()=>{
   if(window._ultimoLog && window._ultimoLog.resultado==='APROVADO'){
@@ -498,7 +829,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // Novo: atualiza banner superior com usuário logado
   const banner = document.getElementById('infoUsuarioLogado');
   if(banner && s.logged){
-    banner.innerHTML = `<span><i class="bi bi-person-circle"></i> <b>${s.nome}</b> <small>(${s.matricula} - ${s.role})</small> <span class="badge ${s.role==='admin'?'bg-danger':'bg-success'} ms-2" style="font-size:9px">${s.role.toUpperCase()}</span> ${s.role==='operador'?'<span class="ms-2 text-warning">🔒 Operador travado em Testes</span>':''}</span><button onclick="AuthSystem.logout()" class="btn btn-sm btn-outline-light py-0"><i class="bi bi-box-arrow-left"></i> Sair</button>`;
+    banner.innerHTML = `<span><i class="bi bi-person-circle"></i> <b>${s.nome}</b> <small>(${s.matricula} - ${s.role})</small> <span class="badge ${s.role==='admin'?'bg-danger':'bg-success'} ms-2" style="font-size:9px">${s.role.toUpperCase()}</span> ${s.role==='operador'?'<span class="ms-2 text-warning">🔓 Acesso: Testes + Etiquetas</span>':''}</span><button onclick="AuthSystem.logout()" class="btn btn-sm btn-outline-light py-0"><i class="bi bi-box-arrow-left"></i> Sair</button>`;
     banner.style.display='flex';
   }
   if(s.role==='operador'){
